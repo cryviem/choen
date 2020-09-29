@@ -1,5 +1,5 @@
 #folder exclude
-Debug/
-Release/
-.settings/
-stm32OS/Debug/obj/
+/Debug
+/Release
+/.settings
+/stm32OS/Debug/obj
