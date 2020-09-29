@@ -50,7 +50,6 @@ TASK(TaskOS_5ms)
 {
 	dmaproc_updatestatus();
 	uart_sts_update_task();
-	timer_status_check();
 }
 
 /* task 10ms
@@ -146,7 +145,6 @@ void prc_buttonstatus_v(void)
 		LED_RED_BLINK();
 		DIR_TOGGLE();
 		/* button pressed detected */
-		timer_start_dma();
 		eventcnt = 0;
 	}
 

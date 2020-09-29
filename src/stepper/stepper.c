@@ -1,5 +1,6 @@
 
 #include "common_inc.h"
+#include "dmacfg.h"
 #include "stepper.h"
 
 /* Mapping
@@ -28,19 +29,24 @@ void stepper_init(void)
 	TIM_REG->DCR |= (TIM_DCR_DBL_0 | TIM_DCR_DBA_2 | TIM_DCR_DBA_1);
 
 	/* Set counting clock to 100 kHz */
-#if ((TIM_REG == TIM1) || (TIM_REG == TIM8))
+#if (TIMER_TYPE == TIMER_TYPE_ADVANCED)
 	/* Counting clock: 168 MHz / (1679 + 1) = 100 kHz T = 10 us*/
 	TIM_REG->PSC = 1679;
 #else
 	/* Counting clock: 84 MHz / (839 + 1) = 100 kHz T = 10 us*/
 	TIM_REG->PSC = 839;
-#endif
+#endif /*(TIMER_TYPE == TIMER_TYPE_ADVANCED)*/
 
 }
 
 
 RetType stepper_mission_start(stepper_mission_t* mission)
 {
+
+	if (STEPPER_READY != mission->status)
+	{
+		return Ret_NotOK;
+	}
 
 	/* Speed configuration */
 	switch (mission->speed)
@@ -89,17 +95,66 @@ RetType stepper_mission_start(stepper_mission_t* mission)
 		break;
 	}
 
+	/* Update rate configuration */
+#if (TIMER_TYPE == TIMER_TYPE_ADVANCED)
+	/* Only advance timers support this feature*/
+	TIM_REG->RCR = mission->update_rate;
+#endif /*(TIMER_TYPE == TIMER_TYPE_ADVANCED)*/
 
-
-	dma_transfer(DMA_HANDLER_TIM4CH1, (uint32_t)&cfg_data, 10);
+	dma_transfer(DMA_HANDLER, (uint32_t)mission->data, mission->len);
 
 	/* DIER reset value: 0x0000 */
 	/* Enable CC1 DMA request*/
-	reg->DIER |= TIM_DIER_CC1DE;
+	TIM_REG->DIER |= TIM_DIER_CC2DE;
 
 	/* Generate CC2 event to let DMA update register for the first time */
+	TIM_REG->EGR |= TIM_EGR_CC2G;
+
+	while (TIM_REG->EGR & TIM_EGR_CC2G); //wait for DMA update CCMR1 and CCMR2 finish
 
 	/* Start counting */
-	reg->CR1 |= TIM_CR1_CEN;
-	print_text("timer dma start\n");
+	TIM_REG->CR1 |= TIM_CR1_CEN;
+	print_text("stepper > mission start\n");
+	mission->status = STEPPER_WORKING;
+	return Ret_OK;
+}
+
+void stepper_status_check(stepper_mission_t* mission)
+{
+	dma_StatusEN dma_status;
+
+	if (STEPPER_WORKING == mission->status)
+	{
+		dma_status = dma_getstatus(DMA_HANDLER);
+
+		switch (dma_status)
+		{
+		case DMA_Status_NotStarted:
+			/* Abnormal case */
+			break;
+		case DMA_Status_Triggered:
+			break;
+		case DMA_Status_InProcess:
+			break;
+		case DMA_Status_Error:
+			print_text("stepper > dma error\n");
+			TIM_REG->DIER &= (~TIM_DIER_CC2DE);
+			TIM_REG->CR1 &= (~TIM_CR1_CEN);
+			dma_cleanup(DMA_HANDLER);
+			mission->status = STEPPER_ERROR;
+			break;
+		case DMA_Status_Completed:
+			print_text("stepper > dma completed\n");
+			TIM_REG->DIER &= (~TIM_DIER_CC2DE);
+			TIM_REG->CR1 &= (~TIM_CR1_CEN);
+			dma_cleanup(DMA_HANDLER);
+			mission->status = STEPPER_IDLE;
+			break;
+		}
+	}
+	else if (STEPPER_ERROR == mission->status)
+	{
+		/* error treatment */
+		mission->status = STEPPER_IDLE;
+	}
 }
