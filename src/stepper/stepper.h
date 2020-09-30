@@ -31,18 +31,12 @@ typedef enum {
 }stepper_speed_t;
 
 typedef enum {
-	STEPPER_IDLE,
-	STEPPER_READY,
-	STEPPER_WORKING,
-	STEPPER_ERROR
-}stepper_status_t;
+	SM_IDLE,
+	SM_WORKING,
+	SM_ERROR
+}state_machine_t;
 
-typedef struct {
-	stepper_status_t		status;
-	stepper_speed_t			speed;
-	uint8_t					update_rate;
-	uint16_t				data[STEPPER_MISSION_MAX_SIZE];
-	uint16_t				len;
-}stepper_mission_t;
+
+
 
 #endif /*_STEPPER_H_*/

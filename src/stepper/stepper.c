@@ -10,6 +10,7 @@ CC3			Y_axis step
 CC4			Y_axis direction
 */
 
+state_machine_t sm_state = SM_IDLE;
 /* General configuration*/
 void stepper_init(void)
 {
@@ -38,7 +39,6 @@ void stepper_init(void)
 #endif /*(TIMER_TYPE == TIMER_TYPE_ADVANCED)*/
 
 }
-
 
 RetType stepper_mission_start(stepper_mission_t* mission)
 {
@@ -123,38 +123,58 @@ void stepper_status_check(stepper_mission_t* mission)
 {
 	dma_StatusEN dma_status;
 
-	if (STEPPER_WORKING == mission->status)
+	switch (sm_state)
 	{
+	case SM_IDLE:
+		/*looking for new mission come*/
+		break;
+	case SM_WORKING:
+		/*monitor dma work*/
 		dma_status = dma_getstatus(DMA_HANDLER);
 
 		switch (dma_status)
 		{
-		case DMA_Status_NotStarted:
-			/* Abnormal case */
-			break;
-		case DMA_Status_Triggered:
-			break;
-		case DMA_Status_InProcess:
-			break;
 		case DMA_Status_Error:
 			print_text("stepper > dma error\n");
 			TIM_REG->DIER &= (~TIM_DIER_CC2DE);
 			TIM_REG->CR1 &= (~TIM_CR1_CEN);
 			dma_cleanup(DMA_HANDLER);
-			mission->status = STEPPER_ERROR;
+			mission->status = SM_ERROR;
 			break;
 		case DMA_Status_Completed:
 			print_text("stepper > dma completed\n");
 			TIM_REG->DIER &= (~TIM_DIER_CC2DE);
 			TIM_REG->CR1 &= (~TIM_CR1_CEN);
 			dma_cleanup(DMA_HANDLER);
-			mission->status = STEPPER_IDLE;
+			mission->status = SM_IDLE;
+			break;
+		default:
+			//DMA_Status_NotStarted
+			//DMA_Status_Triggered
+			//DMA_Status_InProcess
 			break;
 		}
-	}
-	else if (STEPPER_ERROR == mission->status)
-	{
-		/* error treatment */
-		mission->status = STEPPER_IDLE;
+		break;
+	case SM_ERROR:
+		/*looking for new mission come*/
+		break;
 	}
 }
+
+typedef enum{
+	BUFF_IDLE = 0,
+	BUFF_BUSY = 1
+} buff_rd_sts_en;
+
+typedef struct {
+	uint8_t											data[UART_FRAME_SIZE];
+	uint16_t 										actsize;
+} uartFrame_t;
+
+typedef struct {
+	uartFrame_t 									framebuff[UART_TX_BUF_SIZE];
+	uint8_t 										wptr;
+	uint8_t 										rptr;
+	buff_wr_sts_en									wr_sts;
+	buff_rd_sts_en									rd_sts;
+} uartTxRingBuffer_t;
