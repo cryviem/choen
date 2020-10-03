@@ -5,13 +5,22 @@
 
 /* Mapping
 CC1			X_axis step
-CC2			X_axis direction		+ 		update trigger
+CC2			X_axis direction
 CC3			Y_axis step
 CC4			Y_axis direction
 */
 
 state_machine_t sm_state = SM_IDLE;
 mission_pool_t mission_pool = {0};
+
+const uint16_t speed_table[SPEED_INVALID] =
+{
+		10000,
+		5000,
+		1000,
+		500,
+		100
+};
 
 void stepper_mission_start(mission_t* mission);
 mission_t* get_ready_mission(void);
@@ -27,17 +36,16 @@ void stepper_init(void)
 
 	/* CR2 reset value: 0x0000 */
 
-	//TIM_REG->CCMR1 = 0x4848;
-	//TIM_REG->CCMR2 = 0x4848;
-
+	/* CCMR1 and CCMR2, reset value: 0x0000 */
+	/* initialize with "force low" all the channel */
 	TIM_REG->CCMR1 = 0x4848;
 	TIM_REG->CCMR2 = 0x4848;
 
 
-
 	/* DCR reset value: 0x0000 */
-	/* Set DBA to 6 (00110), start from CCMR1*/
-	/* Set DBL to 0 (00001), 2 transfer*/
+	/* Set DBA to 6 (00110), start from CCMR1 */
+	/* Set DBL to 0 (00001), 2 transfer */
+	/* Purpose: CCMR1 and CCMR2 will be DMA feed every cycle */
 	TIM_REG->DCR |= (TIM_DCR_DBL_0 | TIM_DCR_DBA_2 | TIM_DCR_DBA_1);
 
 	/* Set counting clock to 100 kHz */
@@ -51,75 +59,46 @@ void stepper_init(void)
 #endif /*(TIMER_TYPE == TIMER_TYPE_ADVANCED)*/
 
 
-
+	/* initialize the pool */
 	pf_memset(&mission_pool, 0, sizeof(mission_pool));
 
 	/*CCER reset value: 0x0000*/
 	/* Active high, Enable output*/
 	TIM_REG->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);
-	//TIM_REG->CCER |= (TIM_CCER_CC1P | TIM_CCER_CC2P | TIM_CCER_CC3P | TIM_CCER_CC4P);
+
+#if (TIMER_TYPE == TIMER_TYPE_ADVANCED)
+	/* Advance timer need to set MOE bit for output enabling */
+	TIM_REG->BDTR |= TIM_BDTR_MOE;
+#else
+
 }
 
 void stepper_mission_start(mission_t* mission)
 {
 	/* Speed configuration */
-	switch (mission->speed)
-	{
-	case SPEED_0:
-		/* 10 Hz */
-		TIM_REG->ARR = 10000;
-		TIM_REG->CCR2 = 5000;
-		TIM_REG->CCR4 = 5000;
-		break;
-	case SPEED_1:
-		/* 20 Hz */
-		TIM_REG->ARR = 5000;
-		TIM_REG->CCR2 = 2500;
-		TIM_REG->CCR4 = 2500;
-		break;
-	case SPEED_2:
-		/* 100 Hz */
-		TIM_REG->ARR = 1000;
-		TIM_REG->CCR2 = 500;
-		TIM_REG->CCR4 = 500;
-		break;
-	case SPEED_3:
-		/* 200 Hz */
-		TIM_REG->ARR = 500;
-		TIM_REG->CCR2 = 250;
-		TIM_REG->CCR4 = 250;
-		break;
-	case SPEED_4:
-		/* 1000 Hz */
-		TIM_REG->ARR = 100;
-		TIM_REG->CCR2 = 50;
-		TIM_REG->CCR4 = 50;
-		break;
-	default:
-		break;
-	}
-
+	TIM_REG->ARR = speed_table[mission->speed];
 	TIM_REG->CCR1 = TIM_REG->ARR - STEPPER_STEP_ZISE;
 	TIM_REG->CCR3 = TIM_REG->ARR - STEPPER_STEP_ZISE;
-
-	//TIM_REG->CCMR1 = 0x4848;
-	//TIM_REG->CCMR2 = 0x4848;
+	TIM_REG->CCR2 = 0;
+	TIM_REG->CCR4 = 0;
 
 	/* Update rate configuration */
 #if (TIMER_TYPE == TIMER_TYPE_ADVANCED)
 	/* Only advance timers support this feature*/
 	TIM_REG->RCR = mission->upd_rate;
 #endif /*(TIMER_TYPE == TIMER_TYPE_ADVANCED)*/
+
+	/* start dma work */
 	dma_transfer(DMA_HANDLER, (uint32_t)mission->data, mission->actsize);
 
 	/* DIER reset value: 0x0000 */
-	/* Enable CC2 DMA request*/
-	TIM_REG->DIER |= TIM_DIER_CC2DE;
+	/* Enable UEV DMA request*/
+	TIM_REG->DIER |= TIM_DIER_UDE;
 
 	/* Generate CC2 event to let DMA update register for the first time */
-	TIM_REG->EGR |= TIM_EGR_CC2G;
+	TIM_REG->EGR |= TIM_EGR_UG;
 
-	while (TIM_REG->EGR & TIM_EGR_CC2G); //wait for DMA update CCMR1 and CCMR2 finish
+	while (TIM_REG->EGR & TIM_EGR_UG); //wait for DMA update CCMR1 and CCMR2 finish
 
 	/* Start counting */
 	TIM_REG->CR1 |= TIM_CR1_CEN;
@@ -129,7 +108,6 @@ void stepper_task(void)
 {
 	dma_StatusEN dma_status;
 	mission_t* mission_ptr = NULL;
-	static uint8_t debug = 0;
 
 	switch (sm_state)
 	{
@@ -139,7 +117,6 @@ void stepper_task(void)
 
 		if (NULL != mission_ptr)
 		{
-
 			stepper_mission_start(mission_ptr);
 			print_text("stepper > mission start\n");
 			sm_state = SM_WORKING;
@@ -160,6 +137,7 @@ void stepper_task(void)
 			dma_cleanup(DMA_HANDLER);
 			sm_state = SM_ERROR;
 			break;
+
 		case DMA_Status_Completed:
 			print_text("stepper > dma completed\n");
 			TIM_REG->DIER &= (~TIM_DIER_CC2DE);
@@ -168,23 +146,17 @@ void stepper_task(void)
 			on_mission_completed();
 			sm_state = SM_IDLE;
 			break;
+
 		case DMA_Status_InProcess:
-			debug++;
-			if (debug > 100)
-			{
-				print_num(dma_getNDTR(DMA_HANDLER));
-				print_text("\n");
-				debug = 0;
-			}
+			/* just calm and wait */
 			break;
 		default:
 			//DMA_Status_NotStarted
 			//DMA_Status_Triggered
-			//DMA_Status_InProcess
-
 			break;
 		}
 		break;
+
 	case SM_ERROR:
 		/* temporary solution: abort the current, continue the next one*/
 		on_mission_completed();
@@ -219,7 +191,6 @@ mission_t* get_ready_mission(void)
 	if ((tmp == mission_pool.wptr) && (mission_pool.wr_sts == STS_BUSY))
 	{
 		/*write process are ongoing on this buff*/
-		print_text("ringbuff rd on wrbusy\n");
 		return NULL;
 	}
 
@@ -247,7 +218,6 @@ RetType find_idle_mission(void)
 	if (mission_pool.wr_sts != STS_IDLE)
 	{
 		/* last write process hasn't been done */
-		print_text("ringbuff wr busy\n");
 		return Ret_NotOK;
 	}
 
@@ -260,7 +230,6 @@ RetType find_idle_mission(void)
 	if (tmp ==  mission_pool.rptr)
 	{
 #if (1)	/* currently, Over-write is prohibited*/
-		print_text("ringbuff full\n");
 		return Ret_NotOK;
 	}
 #else	/*  */

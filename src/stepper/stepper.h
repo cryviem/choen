@@ -5,17 +5,38 @@
 #include "common_inc.h"
 
 /* CONFIG AREA */
-
+/* basic timer: 2, 3, 4, 5
+ * clock source: 84 MHz
+ * update rate is not supported */
 #define	TIMER_TYPE_BASIC				0
+
+/* advance timer: 1, 8
+ * clock source: 168 MHz
+ * update rate is supported */
 #define	TIMER_TYPE_ADVANCED				1
+
 #define	TIMER_TYPE						TIMER_TYPE_BASIC
 
 #if (TIMER_TYPE == TIMER_TYPE_ADVANCED)
+/* timer1
+ * PINs: 	CC1 PA8		PE9
+ * 			CC2 PA9		PE11
+ * 			CC3 PA10	PE13
+ * 			CC4 PA11	PE14
+ * DMA:		DMA2 stream5 channel6
+ */
 #define TIM_REG							TIM1
-#define DMA_HANDLER						DMA_HANDLER_TIM4CH1
+#define DMA_HANDLER						DMA_HANDLER_TIM1UP
 #else
+/* timer3
+ * PINs: 	CC1 PC6
+ * 			CC2 PC7
+ * 			CC3 PC8
+ * 			CC4 PC9
+ * DMA:		DMA1 stream2 channel5
+ */
 #define TIM_REG							TIM3
-#define DMA_HANDLER						DMA_HANDLER_TIM3CH2
+#define DMA_HANDLER						DMA_HANDLER_TIM3UP
 #endif /*(TIMER_TYPE == TIMER_TYPE_ADVANCED)*/
 
 #define STEPPER_MISSION_MAX_SIZE					2048
@@ -77,4 +98,25 @@ extern RetType set_upd_rate_for_mission(uint8_t update_rate);
 extern void on_mission_ready(void);
 extern RetType append_step_to_mission(step_t stepx, step_t stepy);
 
+/* timer1
+ * PINs: 	CC1 PA8		PE9
+ * 			CC2 PA9		PE11
+ * 			CC3 PA10	PE13
+ * 			CC4 PA11	PE14
+ * DMA:		DMA2 stream5 channel6
+ */
+/* timer8
+ * PINs: 	CC1 PC6
+ * 			CC2 PC7
+ * 			CC3 PC8
+ * 			CC4 PC9
+ * DMA:		DMA2 stream1 channel7
+ */
+/* timer3
+ * PINs: 	CC1 PC6
+ * 			CC2 PC7
+ * 			CC3 PC8
+ * 			CC4 PC9
+ * DMA:		DMA1 stream2 channel5
+ */
 #endif /*_STEPPER_H_*/

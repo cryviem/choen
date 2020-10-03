@@ -79,7 +79,7 @@ const dma_StreamCfgST user_dmacfgtable[DMA_HANDLER_INVALID] = {
 #endif
 	/**********STEPPER************/
 	{
-		DMA1_STREAM_5,
+		DMA1_STREAM_2,
 		5,
 		FALSE,
 		DMA_TRANSTYPE_DIRECT,
