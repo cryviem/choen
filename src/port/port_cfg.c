@@ -35,7 +35,7 @@ const Port_ConfigType		User_PortConfig[] =
 		PORT_PIN_OUT,
 		PORT_PIN_LEVEL_LOW,
 	},
-#else
+
 	{
 		PORT_D_PIN_14,								// LED RED
 		PORT_PIN_HW_PUSHPULL,
@@ -55,26 +55,6 @@ const Port_ConfigType		User_PortConfig[] =
 		PORT_PIN_OUT,
 		PORT_PIN_LEVEL_LOW,
 	},
-
-	{
-		PORT_D_PIN_12,								// LED GREEN
-		PORT_PIN_HW_PUSHPULL,
-		PORT_PIN_HW_NO_PUPD,
-		
-		PORT_PIN_MODE_TIM_3_5,
-		PORT_PIN_OUT,
-		PORT_PIN_LEVEL_LOW,	
-	},
-	
-	{
-		PORT_D_PIN_13,								// LED ORANGE
-		PORT_PIN_HW_PUSHPULL,
-		PORT_PIN_HW_NO_PUPD,
-
-		PORT_PIN_MODE_TIM_3_5,
-		PORT_PIN_OUT,
-		PORT_PIN_LEVEL_LOW,
-	},
 	#endif /* #if (SYSCFG_LAMPS_SUPPORT == SYSCFG_USED) */
 	
 	#if (SYSCFG_BUTTON_SUPPORT == SYSCFG_USED)
@@ -88,6 +68,7 @@ const Port_ConfigType		User_PortConfig[] =
 		PORT_PIN_LEVEL_DONTCARE,
 	},
 	#endif /* #if (SYSCFG_BUTTON_SUPPORT == SYSCFG_USED) */
+	/*****************UART*********************/
 	{
 		PORT_B_PIN_6,								// USART1_TX
 		PORT_PIN_HW_PUSHPULL,
@@ -106,22 +87,40 @@ const Port_ConfigType		User_PortConfig[] =
 		PORT_PIN_IN,
 		PORT_PIN_LEVEL_DONTCARE,
 	},
+	/****************STEPPER********************/
 	{
-		PORT_C_PIN_2,								// DIR
+		PORT_C_PIN_6,								// stepper x step
 		PORT_PIN_HW_PUSHPULL,
 		PORT_PIN_HW_NO_PUPD,
 
-		PORT_PIN_MODE_DIO,
+		PORT_PIN_MODE_TIM_3_5,
 		PORT_PIN_OUT,
 		PORT_PIN_LEVEL_LOW,
 	},
-
 	{
-		PORT_C_PIN_3,								// STEP
+		PORT_C_PIN_7,								// stepper x dir
 		PORT_PIN_HW_PUSHPULL,
 		PORT_PIN_HW_NO_PUPD,
 
-		PORT_PIN_MODE_DIO,
+		PORT_PIN_MODE_TIM_3_5,
+		PORT_PIN_OUT,
+		PORT_PIN_LEVEL_LOW,
+	},
+	{
+		PORT_C_PIN_8,								// stepper y step
+		PORT_PIN_HW_PUSHPULL,
+		PORT_PIN_HW_NO_PUPD,
+
+		PORT_PIN_MODE_TIM_3_5,
+		PORT_PIN_OUT,
+		PORT_PIN_LEVEL_LOW,
+	},
+	{
+		PORT_C_PIN_9,								// stepper y dir
+		PORT_PIN_HW_PUSHPULL,
+		PORT_PIN_HW_NO_PUPD,
+
+		PORT_PIN_MODE_TIM_3_5,
 		PORT_PIN_OUT,
 		PORT_PIN_LEVEL_LOW,
 	},

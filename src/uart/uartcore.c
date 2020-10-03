@@ -175,7 +175,6 @@ void uartcore_mainprocess_cycle10ms(uart_handletype* uarthandler)
 								}						
 								/* back to the IDLE state - ready for new uart transmission */
 								uarthandler->txstate = UART_TxSt_IDLE;	
-								//LED_GREEN_BLINK();
 							}
 							break;
 						}
@@ -199,7 +198,6 @@ void uartcore_mainprocess_cycle10ms(uart_handletype* uarthandler)
 				{
 					/* Tx Error handling */
 					/* retry to send this frame */
-					//LED_RED_BLINK();
 					if (Ret_OK == dma_transfer(uarthandler->cfg_table->dma_tx_id, l_txmemadr_ul, l_txdatalen_uw))
 					{
 						uarthandler->txstate = UART_TxSt_TRGR;
@@ -302,7 +300,6 @@ void uartcore_mainprocess_cycle10ms(uart_handletype* uarthandler)
 				case UART_RxSt_ERROR:
 				{
 					/* Error handling */
-					//LED_RED_BLINK();
 					if (Ret_OK == dma_transfer(uarthandler->cfg_table->dma_rx_id, l_rxmemadr_ul, l_rxdatalenmax_uw))
 					{
 						/* trigger DMA successfully - go to other state*/

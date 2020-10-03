@@ -30,7 +30,7 @@ void main(void)
 	
 	while (1)
 	{
-		/* should not place code here */
+		/* backgground tasks for such lowest prioroty */
 	}
 }
 

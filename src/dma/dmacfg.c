@@ -77,9 +77,10 @@ const dma_StreamCfgST user_dmacfgtable[DMA_HANDLER_INVALID] = {
 		(uint32_t)0x00
 	},
 #endif
+	/**********STEPPER************/
 	{
-		DMA1_STREAM_0,
-		2,
+		DMA1_STREAM_5,
+		5,
 		FALSE,
 		DMA_TRANSTYPE_DIRECT,
 		DMA_CR_Priority_High,
@@ -87,10 +88,11 @@ const dma_StreamCfgST user_dmacfgtable[DMA_HANDLER_INVALID] = {
 		DMA_CR_PSIZE_16Bit,
 		DMA_CR_PSIZE_16Bit,
 		DMA_ADDRINC_PeriphFixedMemInc,
-		(uint32_t)&TIM4->DMAR,
+		(uint32_t)&TIM3->DMAR,
 		(uint32_t)NULL,
 		(uint32_t)0x00
 	},
+	/************UART************/
 	{
 		DMA2_STREAM_7,
 		4,

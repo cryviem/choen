@@ -15,7 +15,7 @@
 		PORT_D_PIN_13
 		PORT_D_PIN_14
 		PORT_D_PIN_15 */
-#define SYSCFG_LAMPS_SUPPORT			  SYSCFG_NOT_USED
+#define SYSCFG_LAMPS_SUPPORT			  SYSCFG_USED
 
 /* integrated user button 
 	 >SYSCFG_GPIO_A should be used.
@@ -42,8 +42,8 @@
 /* TIMER */
 #define SYSCFG_TIM_1								SYSCFG_NOT_USED
 #define SYSCFG_TIM_2								SYSCFG_NOT_USED
-#define SYSCFG_TIM_3								SYSCFG_NOT_USED
-#define SYSCFG_TIM_4								SYSCFG_USED
+#define SYSCFG_TIM_3								SYSCFG_USED
+#define SYSCFG_TIM_4								SYSCFG_NOT_USED
 #define SYSCFG_TIM_5								SYSCFG_NOT_USED
 #define SYSCFG_TIM_6								SYSCFG_NOT_USED
 #define SYSCFG_TIM_7								SYSCFG_NOT_USED

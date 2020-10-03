@@ -38,7 +38,6 @@ RetType uartif_ReqWrTxBuff(uint8_t** memadr)
 	if (g_uartTxRingBuff_st.wr_sts != BUFF_WR_IDLE)
 	{
 		/* last write process hasn't been done */
-		LED_BLUE_BLINK();
 		return Ret_NotOK;
 	}
 	

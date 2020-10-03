@@ -4,28 +4,16 @@
 #include "app_control.h"
 #include "common_inc.h"
 #include "uartcfg.h"
+#include "stepper.h"
+#include "movement.h"
 
 #if (SYSCFG_BUTTON_SUPPORT == SYSCFG_USED)
 #include "port.h"
-
 #define BUTTON_FILTERTIME						10
-
 void prc_buttonstatus_v(void);
-extern void timer_start(void);
-extern void timer_start_dma(void);
 #endif /* #if (SYSCFG_BUTTON_SUPPORT == SYSCFG_USED) */
 
-extern void timer_status_check(void);
 
-#define DIR_ON()					GPIOC->BSRRL |= 0x00000004
-#define DIR_OFF()					GPIOC->BSRRH |= 0x00000004
-#define DIR_TOGGLE()				GPIOC->ODR ^= 0x00000004
-
-#define STEP_ON()					GPIOC->BSRRL |= 0x00000008
-#define STEP_OFF()					GPIOC->BSRRH |= 0x00000008
-#define STEP_TOGGLE()				GPIOC->ODR ^= 0x00000008
-
-uint16_t counter = 0;
 /* ISR */
 ISR2(systick_handler)
 {
@@ -37,10 +25,7 @@ priority: 0xF0 --> lowest
  */
 TASK(TaskOS_2ms)
 {
-	//counter++;
-	LED_BLUE_BLINK();
-	STEP_TOGGLE();
-	//if (counter > )
+
 }
 
 /* task 5ms
@@ -49,6 +34,7 @@ priority: 0xFA --> highest
 TASK(TaskOS_5ms)
 {
 	dmaproc_updatestatus();
+	stepper_task();
 	uart_sts_update_task();
 }
 
@@ -110,7 +96,7 @@ void OS_initialize(void)
 	EE_systick_set_period(MILLISECONDS_TO_TICKS(1, SystemCoreClock));
 	EE_systick_enable_int();
 
-	SetRelAlarm(AlarmOS_2ms, 10, 6);
+	//SetRelAlarm(AlarmOS_2ms, 10, 2);
 	SetRelAlarm(AlarmOS_5ms, 10, 5);
 	SetRelAlarm(AlarmOS_10ms, 12, 10);
 	SetRelAlarm(AlarmOS_20ms, 14, 20);
@@ -142,8 +128,7 @@ void prc_buttonstatus_v(void)
 
 	if (eventcnt > BUTTON_FILTERTIME)
 	{
-		LED_RED_BLINK();
-		DIR_TOGGLE();
+		stepper_test();
 		/* button pressed detected */
 		eventcnt = 0;
 	}
