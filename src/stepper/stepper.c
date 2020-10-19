@@ -54,8 +54,8 @@ void stepper_init(void)
 	TIM_REG->PSC = 1679;
 #else
 	/* Counting clock: 84 MHz / (839 + 1) = 100 kHz T = 10 us*/
-	//TIM_REG->PSC = 839;
-	TIM_REG->PSC = 8399;	//T = 100 us for test purpose
+	TIM_REG->PSC = 839;
+	//TIM_REG->PSC = 8399;	//T = 100 us for test purpose
 #endif /*(TIMER_TYPE == TIMER_TYPE_ADVANCED)*/
 
 
@@ -69,7 +69,7 @@ void stepper_init(void)
 #if (TIMER_TYPE == TIMER_TYPE_ADVANCED)
 	/* Advance timer need to set MOE bit for output enabling */
 	TIM_REG->BDTR |= TIM_BDTR_MOE;
-#else
+#endif
 
 }
 

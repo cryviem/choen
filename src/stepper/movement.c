@@ -2,8 +2,8 @@
 #include "stepper.h"
 #include "movement.h"
 
-step_t x_list[10] = {STEP_FORWARD, STEP_FORWARD, STEP_FORWARD, STEP_NONE, STEP_BACKWARD, STEP_BACKWARD, STEP_BACKWARD, STEP_BACKWARD, STEP_FORWARD, STEP_FORWARD};
-step_t y_list[10] = {STEP_BACKWARD, STEP_BACKWARD, STEP_BACKWARD, STEP_NONE, STEP_FORWARD, STEP_FORWARD, STEP_FORWARD, STEP_FORWARD, STEP_BACKWARD, STEP_BACKWARD};
+step_t x_list[400] = {STEP_FORWARD};
+step_t y_list[400] = {STEP_NONE};
 
 void stepper_test(void)
 {
@@ -18,11 +18,15 @@ void stepper_test(void)
 
 	set_speed_for_mission(SPEED_3);
 
-	for (i = 0; i < 10; i++)
+	for (i = 0; i < 200; i++)
 	{
-		append_step_to_mission(x_list[i], y_list[i]);
+		append_step_to_mission(STEP_FORWARD, STEP_FORWARD);
 	}
 
 	on_mission_ready();
 	LED_BLUE_BLINK();
 }
+
+/* FULL STEP MODE
+ * 1 step ~ 0.2 mm
+ **/
