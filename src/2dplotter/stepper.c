@@ -1,7 +1,8 @@
 
+#include "stepper.h"
+
 #include "common_inc.h"
 #include "dmacfg.h"
-#include "stepper.h"
 
 /* Mapping
 CC1			X_axis step

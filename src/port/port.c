@@ -339,6 +339,25 @@ void Port_SubInit( const Port_ConfigType* ConfigPtr)
 				l_Port_Handler->AFR[l_PinNum >> 0x03] |= (0x00000003	<< ((l_PinNum & 0x07)*4));
 			}
 			break;
+
+			case PORT_PIN_MODE_CAN_TIM_12_14:
+			if (PORT_PIN_OUT == ConfigPtr->PinDirection)
+			{
+				l_Port_Handler->MODER |= ((0x00000002) << (l_PinNum*2));
+				l_Port_Handler->OTYPER |= ((ConfigPtr->PinHWType) << l_PinNum);
+				l_Port_Handler->OSPEEDR |= ((0x00000003) << (l_PinNum*2));
+
+				l_Port_Handler->AFR[l_PinNum >> 0x03] &= ~(0x0000000F << ((l_PinNum & 0x07)*4));
+				l_Port_Handler->AFR[l_PinNum >> 0x03] |= (0x00000009	<< ((l_PinNum & 0x07)*4));
+			}
+			else
+			{
+				l_Port_Handler->MODER |= ((0x00000002) << (l_PinNum*2));
+
+				l_Port_Handler->AFR[l_PinNum >> 0x03] &= ~(0x0000000F << ((l_PinNum & 0x07)*4));
+				l_Port_Handler->AFR[l_PinNum >> 0x03] |= (0x00000009	<< ((l_PinNum & 0x07)*4));
+			}
+			break;
 		// will be updated in future ...
 		default:
 			break;	

@@ -1,9 +1,10 @@
-#include "common_inc.h"
-#include "stepper.h"
-#include "movement.h"
+#include "../2dplotter/movement.h"
 
-step_t x_list[400] = {STEP_FORWARD};
-step_t y_list[400] = {STEP_NONE};
+#include "common_inc.h"
+
+#include "../2dplotter/stepper.h"
+
+xy_position_t	current_pos = {0};
 
 void stepper_test(void)
 {

@@ -124,6 +124,15 @@ const Port_ConfigType		User_PortConfig[] =
 		PORT_PIN_OUT,
 		PORT_PIN_LEVEL_LOW,
 	},
+	{
+		PORT_A_PIN_7,								// servo control pin
+		PORT_PIN_HW_PUSHPULL,
+		PORT_PIN_HW_NO_PUPD,
+
+		PORT_PIN_MODE_CAN_TIM_12_14,
+		PORT_PIN_OUT,
+		PORT_PIN_LEVEL_LOW,
+	},
 /*------THE END OF USER EDIT SECTION---------*/
 	{
 		PORT_ENDFLAG,

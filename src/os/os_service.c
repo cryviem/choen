@@ -4,8 +4,9 @@
 #include "app_control.h"
 #include "common_inc.h"
 #include "uartcfg.h"
-#include "stepper.h"
+
 #include "movement.h"
+#include "stepper.h"
 
 #if (SYSCFG_BUTTON_SUPPORT == SYSCFG_USED)
 #include "port.h"
@@ -128,7 +129,8 @@ void prc_buttonstatus_v(void)
 
 	if (eventcnt > BUTTON_FILTERTIME)
 	{
-		stepper_test();
+		//stepper_test();
+		servo_test();
 		/* button pressed detected */
 		eventcnt = 0;
 	}

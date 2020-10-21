@@ -5,6 +5,8 @@
 #include "common_inc.h"
 #include "uartcfg.h"
 #include "uart_if.h"
+
+#include "servo.h"
 #include "stepper.h"
 
 /* PRIVATE FUNCTION DECLARE BEGIN */
@@ -19,6 +21,7 @@ void Prj_InitBeforeOS(void)
 	dma_init();
 	uart_init();
 	stepper_init();
+	servo_init();
 
 }
 
