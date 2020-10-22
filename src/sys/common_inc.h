@@ -19,6 +19,9 @@
 
 #define UNUSED(x) ((void)(x))
 
+#define MIN(a, b)						(a <= b)? a:b
+#define MAX(a, b)						(a >= b)? a:b
+
 #define LED_GREEN_ON()					GPIOD->BSRRL |= 0x00001000
 #define LED_GREEN_OFF()					GPIOD->BSRRH |= 0x00001000
 #define LED_GREEN_BLINK()				GPIOD->ODR ^= 0x00001000

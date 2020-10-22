@@ -382,3 +382,14 @@ RetType append_step_to_mission(step_t stepx, step_t stepy)
 
 	return Ret_OK;
 }
+
+RetType stepper_rest(void)
+{
+	if ((mission_pool.rd_sts == STS_IDLE) && (mission_pool.wr_sts == STS_IDLE) && (mission_pool.rptr == mission_pool.wptr))
+	{
+		/* stepper is free*/
+		return Ret_OK;
+	}
+
+	return Ret_NotOK;
+}

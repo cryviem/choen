@@ -97,6 +97,7 @@ extern RetType set_speed_for_mission(speed_t speed);
 extern RetType set_upd_rate_for_mission(uint8_t update_rate);
 extern void on_mission_ready(void);
 extern RetType append_step_to_mission(step_t stepx, step_t stepy);
+extern RetType stepper_rest(void);
 
 /* timer1
  * PINs: 	CC1 PA8		PE9
