@@ -6,8 +6,11 @@
 xy_position_t	current_pos = {0};
 cmd_t cmd_handler = {0};
 
-static RetType bresenhamPositiveSmallSlope(int16_t dscan, int16_t dpick, uint8_t inverse);
-static RetType bresenhamNegativeSmallSlope(int16_t dscan, int16_t dpick, uint8_t inverse);
+static RetType bresenhamLine(int16_t abs_dscan, int16_t abs_dpick, uint8_t octant);
+static uint8_t findOctant(int16_t dx, int16_t dy);
+static xy_step_t convertOctant(xy_step_t source, uint8_t octant);
+static RetType appendAndconvertStep(xy_step_t step, uint16_t len, uint8_t octant);
+static RetType fillAllWithFixedStep(xy_step_t step, uint16_t len, uint8_t octant);
 static RetType linearLine(int16_t dx, int16_t dy);
 static RetType freeMove(int16_t dx, int16_t dy);
 
@@ -36,255 +39,223 @@ void stepper_test(void)
 /* FULL STEP MODE
  * 1 step ~ 0.2 mm
  **/
-
-static RetType bresenhamPositiveSmallSlope(int16_t dscan, int16_t dpick, uint8_t inverse)
+static uint8_t findOctant(int16_t dx, int16_t dy)
 {
-	int16_t eps = 0;
-	uint16_t i;
-	step_t pick_axis = STEP_NONE;
-	RetType ret = Ret_NotOK;
+	uint8_t octant;
 
-	if (dscan > 0)
+	if (abs(dx) >= abs(dy))
 	{
-		/* increasing direction */
-		for (i = 0; i <= dscan; i++)
+		if (dx >= 0)
 		{
-			eps += dpick;
-			if ((eps << 1) >= dscan)
+			if (dy >= 0)
 			{
-				pick_axis = STEP_FORWARD;
-				eps -= dscan;
+				octant = 0;
 			}
 			else
 			{
-				pick_axis = STEP_NONE;
-			}
-
-			if (inverse)
-			{
-				/**/
-				ret = append_step_to_mission(pick_axis, STEP_FORWARD);
-			}
-			else
-			{
-				ret = append_step_to_mission(STEP_FORWARD, pick_axis);
-			}
-
-			if (ret != Ret_OK)
-			{
-				/*error occur!, stop the thing*/
-				break;
+				octant = 7;
 			}
 		}
-	}
-	else if (dscan < 0)
-	{
-		/* decreasing direction */
-		dscan = abs(dscan);
-
-		for (i = 0; i <= dscan; i++)
+		else
 		{
-			eps += dpick;
-			if ((eps << 1) >= dscan)
+			if (dy >= 0)
 			{
-				pick_axis = STEP_FORWARD;
-				eps -= dscan;
+				octant = 3;
 			}
 			else
 			{
-				pick_axis = STEP_NONE;
-			}
-
-			if (inverse)
-			{
-				/**/
-				ret = append_step_to_mission(pick_axis, STEP_BACKWARD);
-			}
-			else
-			{
-				ret = append_step_to_mission(STEP_BACKWARD, pick_axis);
-			}
-
-			if (ret != Ret_OK)
-			{
-				/*error occur!, stop the thing*/
-				break;
+				octant = 4;
 			}
 		}
 	}
 	else
 	{
-		/*scan1 == scan2 should never happen here, if yes, error returns back*/
+		if (dx >= 0)
+		{
+			if (dy >= 0)
+			{
+				octant = 1;
+			}
+			else
+			{
+				octant = 6;
+			}
+		}
+		else
+		{
+			if (dy >= 0)
+			{
+				octant = 2;
+			}
+			else
+			{
+				octant = 5;
+			}
+		}
+	}
+
+	return octant;
+}
+
+static xy_step_t convertOctant(xy_step_t source, uint8_t octant)
+{
+	xy_step_t dest = {STEP_NONE, STEP_NONE};
+
+	switch (octant)
+	{
+	case 0:
+		dest.step_x = source.step_x;
+		dest.step_y = source.step_y;
+		break;
+	case 1:
+		dest.step_x = source.step_y;
+		dest.step_y = source.step_x;
+		break;
+	case 2:
+		dest.step_x = MOVE_REVERSE(source.step_y);
+		dest.step_y = source.step_x;
+		break;
+	case 3:
+		dest.step_x = MOVE_REVERSE(source.step_x);
+		dest.step_y = source.step_y;
+		break;
+	case 4:
+		dest.step_x = MOVE_REVERSE(source.step_x);
+		dest.step_y = MOVE_REVERSE(source.step_y);
+		break;
+	case 5:
+		dest.step_x = MOVE_REVERSE(source.step_y);
+		dest.step_y = MOVE_REVERSE(source.step_x);
+		break;
+	case 6:
+		dest.step_x = source.step_y;
+		dest.step_y = MOVE_REVERSE(source.step_x);
+		break;
+	case 7:
+		dest.step_x = source.step_x;
+		dest.step_y = MOVE_REVERSE(source.step_y);
+		break;
+	default:
+		break;
+	}
+
+	return dest;
+}
+
+static RetType appendAndconvertStep(xy_step_t step, uint16_t len, uint8_t octant)
+{
+	xy_step_t final_step;
+	RetType ret = Ret_NotOK;
+
+	final_step = convertOctant(step, octant);
+	ret = append_step_to_mission(final_step.step_x, final_step.step_y);
+
+	return ret;
+}
+
+static RetType fillAllWithFixedStep(xy_step_t step, uint16_t len, uint8_t octant)
+{
+	xy_step_t final_step;
+	RetType ret = Ret_NotOK;
+
+	final_step = convertOctant(step, octant);
+
+	while (len)
+	{
+		ret = append_step_to_mission(final_step.step_x, final_step.step_y);
+		if (ret != Ret_OK)
+		{
+			break;
+		}
 	}
 
 	return ret;
 }
 
-static RetType bresenhamNegativeSmallSlope(int16_t dscan, int16_t dpick, uint8_t inverse)
+static RetType bresenhamLine(int16_t abs_dscan, int16_t abs_dpick, uint8_t octant)
 {
 	int16_t eps = 0;
 	uint16_t i;
-	step_t pick_axis = STEP_NONE;
+	xy_step_t step = {STEP_FORWARD, STEP_NONE};
 	RetType ret = Ret_NotOK;
 
-	if (dscan > 0)
+	if (abs_dscan < abs_dpick)
 	{
-		/* increasing direction */
-		for (i = 0; i <= dscan; i++)
+		/*false input, Bresenham line constrain is dscan has to bigger or equal dpick*/
+		return ret;
+	}
+
+	/*Note: num of loop??*/
+	for (i = 0; i < abs_dscan; i++)
+	{
+		eps += abs_dpick;
+		if ((eps << 1) >= abs_dscan)
 		{
-			eps += dpick;
-			if (((eps << 1) + dscan) <= 0)
-			{
-				pick_axis = STEP_BACKWARD;
-				eps += dscan;
-			}
-			else
-			{
-				pick_axis = STEP_NONE;
-			}
+			step.step_y = STEP_FORWARD;
+			eps -= abs_dscan;
+		}
+		else
+		{
+			step.step_y = STEP_NONE;
+		}
 
-			if (inverse)
-			{
-				/**/
-				ret = append_step_to_mission(pick_axis, STEP_FORWARD);
-			}
-			else
-			{
-				ret = append_step_to_mission(STEP_FORWARD, pick_axis);
-			}
+		ret = appendAndconvertStep(step, octant);
 
-			if (ret != Ret_OK)
-			{
-				/*error occur!, stop the thing*/
-				break;
-			}
+		if (ret != Ret_OK)
+		{
+			/*error occur!, stop the thing*/
+			break;
 		}
 	}
-	else if (dscan < 0)
-	{
-		/* decreasing direction */
-		dscan = abs(dscan);
-
-		for (i = 0; i <= dscan; i++)
-		{
-			eps += dpick;
-			if (((eps << 1) + dscan) <= 0)
-			{
-				pick_axis = STEP_BACKWARD;
-				eps += dscan;
-			}
-			else
-			{
-				pick_axis = STEP_NONE;
-			}
-
-			if (inverse)
-			{
-				/**/
-				ret = append_step_to_mission(pick_axis, STEP_BACKWARD);
-			}
-			else
-			{
-				ret = append_step_to_mission(STEP_BACKWARD, pick_axis);
-			}
-
-			if (ret != Ret_OK)
-			{
-				/*error occur!, stop the thing*/
-				break;
-			}
-		}
-	}
-	else
-	{
-		/*scan1 == scan2 should never happen here, if yes, error returns back*/
-	}
-
 	return ret;
 }
 
+static RetType midPointArcOctant1(int16_t radius, step_t* ytable)
+{
+
+}
 /*
  * Note: this is blocking function */
 static RetType linearLine(int16_t dx, int16_t dy)
 {
-	uint16_t i;
-
-	step_t dir = STEP_NONE;
+	int16_t abs_dx;
+	int16_t abs_dy;
+	xy_step_t fixedstep = {STEP_NONE, STEP_NONE};
 	RetType ret = Ret_NotOK;
+	uint8_t octant;
+
+	if ((dx == 0) && (dy == 0))
+	{
+		return ret;
+	}
+
+	octant = findOctant(dx, dy);
+	abs_dx = abs(dx);
+	abs_dy = abs(dy);
 
 	if (dx == 0)
 	{
-		/* vertical line*/
-		if (dy > 0)
-		{
-			/*y move forward*/
-			dir = STEP_FORWARD;
-		}
-		else
-		{
-			dir = STEP_BACKWARD;
-		}
-
-		for (i = 0; i <= abs(dy); i++)
-		{
-			ret = append_step_to_mission(STEP_NONE, dir);
-			if (ret != Ret_OK)
-			{
-				break;
-			}
-		}
+		/* vertical line */
+		fixedstep.step_y = STEP_FORWARD;
+		ret = fillAllWithFixedStep(fixedstep, abs_dy, octant);
 	}
 	else if (dy == 0)
 	{
-		/* horizon line*/
-		if (dx > 0)
-		{
-			dir = STEP_FORWARD;
-		}
-		else
-		{
-			dir = STEP_BACKWARD;
-		}
-
-		for (i = 0; i <= abs(dx); i++)
-		{
-			ret = append_step_to_mission(dir, STEP_NONE);
-			if (ret != Ret_OK)
-			{
-				break;
-			}
-		}
+		/* horizon line */
+		fixedstep.step_x = STEP_FORWARD;
+		ret = fillAllWithFixedStep(fixedstep, abs_dx, octant);
+	}
+	else if (abs_dx == abs_dy)
+	{
+		/* 45 deg */
+		fixedstep.step_x = STEP_FORWARD;
+		fixedstep.step_y = STEP_FORWARD;
+		ret = fillAllWithFixedStep(fixedstep, abs_dx, octant);
 	}
 	else
 	{
-		if (abs(dx) >= abs(dy))
-		{
-			/*small slope*/
-			if (dy > 0)
-			{
-				/*positive slope*/
-				ret = bresenhamPositiveSmallSlope(dx, dy, FALSE);
-			}
-			else
-			{
-				/*negative slope*/
-				ret = bresenhamNegativeSmallSlope(dx, dy, FALSE);
-			}
-		}
-		else
-		{
-			/*big slope*/
-			if (dx > 0)
-			{
-				/*positive slope*/
-				ret = bresenhamPositiveSmallSlope(dy, dx, TRUE);
-			}
-			else
-			{
-				/*negative slope*/
-				ret = bresenhamNegativeSmallSlope(dy, dx, TRUE);
-			}
-		}
+		/* normal cases */
+		ret = bresenhamLine(abs_dx, abs_dy, octant);
 	}
 
 	return ret;
@@ -298,7 +269,7 @@ static RetType freeMove(int16_t dx, int16_t dy)
 	return Ret_OK;
 }
 
-
+static RetType cwArc()
 void movement_bgtask(void)
 {
 	RetType ret;

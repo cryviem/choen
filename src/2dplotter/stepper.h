@@ -46,11 +46,11 @@
 
 /* ---------------- */
 
-typedef enum {
-	STEP_NONE,
-	STEP_FORWARD,
-	STEP_BACKWARD
-} step_t;
+#define STEP_NONE					0
+#define STEP_FORWARD				1
+#define STEP_BACKWARD				2
+
+typedef uint8_t step_t;
 
 typedef enum {
 	SPEED_0 = 0,
