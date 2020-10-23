@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <math.h>
 #include "movement.h"
 #include "common_inc.h"
 #include "stepper.h"
@@ -8,8 +9,8 @@ cmd_t cmd_handler = {0};
 
 static RetType bresenhamLine(int16_t abs_dscan, int16_t abs_dpick, uint8_t octant);
 static uint8_t findOctant(int16_t dx, int16_t dy);
-static xy_step_t convertOctant(xy_step_t source, uint8_t octant);
-static RetType appendAndconvertStep(xy_step_t step, uint16_t len, uint8_t octant);
+static xy_step_t convertStepByOctant(xy_step_t source, uint8_t octant);
+static RetType appendAndconvertStep(xy_step_t step, uint8_t octant);
 static RetType fillAllWithFixedStep(xy_step_t step, uint16_t len, uint8_t octant);
 static RetType linearLine(int16_t dx, int16_t dy);
 static RetType freeMove(int16_t dx, int16_t dy);
@@ -97,7 +98,7 @@ static uint8_t findOctant(int16_t dx, int16_t dy)
 	return octant;
 }
 
-static xy_step_t convertOctant(xy_step_t source, uint8_t octant)
+static xy_step_t convertStepByOctant(xy_step_t source, uint8_t octant)
 {
 	xy_step_t dest = {STEP_NONE, STEP_NONE};
 
@@ -142,12 +143,12 @@ static xy_step_t convertOctant(xy_step_t source, uint8_t octant)
 	return dest;
 }
 
-static RetType appendAndconvertStep(xy_step_t step, uint16_t len, uint8_t octant)
+static RetType appendAndconvertStep(xy_step_t step, uint8_t octant)
 {
 	xy_step_t final_step;
 	RetType ret = Ret_NotOK;
 
-	final_step = convertOctant(step, octant);
+	final_step = convertStepByOctant(step, octant);
 	ret = append_step_to_mission(final_step.step_x, final_step.step_y);
 
 	return ret;
@@ -158,7 +159,7 @@ static RetType fillAllWithFixedStep(xy_step_t step, uint16_t len, uint8_t octant
 	xy_step_t final_step;
 	RetType ret = Ret_NotOK;
 
-	final_step = convertOctant(step, octant);
+	final_step = convertStepByOctant(step, octant);
 
 	while (len)
 	{
@@ -210,9 +211,31 @@ static RetType bresenhamLine(int16_t abs_dscan, int16_t abs_dpick, uint8_t octan
 	return ret;
 }
 
-static RetType midPointArcOctant1(int16_t radius, step_t* ytable)
+static uint16_t midPointArcOctant1(int16_t radius, int16_t* ytable)
 {
+	uint16_t cnt = 0;
+	int16_t x = 0;
+	int16_t y = radius;
+	int16_t fm = 1 - radius;
 
+	while (x <= y)
+	{
+		ytable[x] = y;
+		cnt++;
+
+		if (fm < 0)
+		{
+			fm += 2*x + 3;
+		}
+		else
+		{
+			fm += 2*(x - y) + 5;
+			y--;
+		}
+		x++;
+	}
+
+	return cnt;
 }
 /*
  * Note: this is blocking function */
@@ -269,7 +292,52 @@ static RetType freeMove(int16_t dx, int16_t dy)
 	return Ret_OK;
 }
 
-static RetType cwArc()
+/*
+ * center [dx, dy]: relative position of center point from current
+ * end [dx, dy]: relative position of end point from current*/
+static RetType cwArc(xy_position_t center, xy_position_t end)
+{
+	xy_position_t beginc;
+	xy_position_t endc;
+	double r0, r1, tmp;
+	int16_t radius;
+	int16_t ytb[MAX_STEP_PER_CIRCLE_OCTANT];
+	uint16_t cnt = 0;
+	uint8_t begin_oct, end_oct;
+	uint16_t begin_idx, end_idx;
+	RetType ret = Ret_NotOK;
+
+	beginc.x = 0 - center.x;
+	beginc.y = 0 - center.y;
+	endc.x = end.x - center.x;
+	endc.y = end.y - center.y;
+
+	r0 = sqrt(beginc.x*beginc.x + beginc.y*beginc.y);
+	r1 = sqrt(endc.x*endc.x + endc.y*endc.y);
+
+	/* we should see not much differences between r0 and r1*/
+	tmp = r0 - r1;
+	if (((double)-1 > tmp) && ((double)1 < tmp))
+	{
+		/* big tolerance */
+		return ret;
+	}
+
+	tmp = (r0 + r1)/2;
+	radius = (int16_t)tmp;
+	if (tmp > (double)(radius + 0.5))
+	{
+		/* round to nearest*/
+		radius++;
+	}
+
+
+	cnt = midPointArcOctant1(radius, ytb);
+
+	begin_oct = findOctant(beginc.x, beginc.y);
+	end_oct = findOctant(endc.x, endc.y);
+
+}
 void movement_bgtask(void)
 {
 	RetType ret;

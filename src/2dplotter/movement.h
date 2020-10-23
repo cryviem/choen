@@ -14,13 +14,21 @@
 #define	X_AXIS_LIMIT_STEP				(X_AXIS_LIMIT_MM/RESLUTION)
 #define	Y_AXIS_LIMIT_STEP				(Y_AXIS_LIMIT_MM/RESLUTION)
 
+/*
+ * biggest circle command 240mm*3.14 = 1200step*3.14 + buffer
+ * */
+#define MAX_STEP_PER_CMD				3780
+
+/* MAX_STEP_PER_CMD / 8 + 1 */
+#define MAX_STEP_PER_CIRCLE_OCTANT		473
+
 #define MOVE_FORWARD(x)					(x == TRUE)? STEP_FORWARD:STEP_NONE
 #define MOVE_BACKWARD(x)				(x == TRUE)? STEP_BACKWARD:STEP_NONE
 #define MOVE_REVERSE(x)					(x == STEP_FORWARD)? STEP_BACKWARD:((x == STEP_BACKWARD)? STEP_FORWARD:STEP_NONE)
 
 typedef struct {
-	uint16_t	x;
-	uint16_t	y;
+	int16_t	x;
+	int16_t	y;
 } xy_position_t;
 
 typedef struct {
