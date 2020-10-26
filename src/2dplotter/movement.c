@@ -6,7 +6,8 @@
 
 xy_position_t	current_pos = {0};
 cmd_t cmd_handler = {0};
-
+step_t x_cwdir_table[8] = {STEP_FORWARD, STEP_FORWARD, STEP_FORWARD, STEP_FORWARD, STEP_BACKWARD, STEP_BACKWARD, STEP_BACKWARD, STEP_BACKWARD};
+step_t y_cwdir_table[8] = {STEP_BACKWARD, STEP_BACKWARD, STEP_FORWARD, STEP_FORWARD, STEP_FORWARD, STEP_FORWARD, STEP_BACKWARD, STEP_BACKWARD};
 static RetType bresenhamLine(int16_t abs_dscan, int16_t abs_dpick, uint8_t octant);
 static uint8_t findOctant(int16_t dx, int16_t dy);
 static xy_step_t convertStepFromToOctant0(xy_step_t source, uint8_t octant);
@@ -358,6 +359,49 @@ static uint16_t findindex(xy_position_t pos, uint8_t octant, int16_t* ytb, uint1
 
 	return CALC_INVALID_NUM;
 }
+
+static RetType copyToFinal(uint16_t start_idx, uint16_t stop_idx, uint8_t octant, int16_t* ytb, uint8_t start_flag)
+{
+	uint16_t idx = start_idx;
+	xy_position_t source, dest;
+	static xy_position_t pre_pos;
+	step_t x, y;
+
+
+	if (start_flag == TRUE)
+	{
+		source.x = start_idx;
+		source.y = ytb[start_idx];
+		pre_pos = convertPosFromToOctant1(source, octant);
+
+		if (start_idx < stop_idx)
+		{
+			idx++;
+		}
+		else if (start_idx > stop_idx)
+		{
+			idx--;
+		}
+	}
+
+	while (idx != stop_idx)
+	{
+		source.x = idx;
+		source.y = ytb[idx];
+		dest = convertPosFromToOctant1(source, octant);
+
+		x = x_cwdir_table(octant)
+		if (start_idx < stop_idx)
+		{
+			idx++;
+		}
+		else if (start_idx > stop_idx)
+		{
+			idx--;
+		}
+	}
+}
+
 /*
  * center [dx, dy]: relative position of center point from current
  * end [dx, dy]: relative position of end point from current*/
@@ -405,6 +449,10 @@ static RetType cwArc(xy_position_t center, xy_position_t end)
 	end_oct = findOctant(endc.x, endc.y);
 	end_idx = findindex(endc, end_oct, ytb, cnt);
 
+	if ((begin_oct == end_oct) && ((((begin_oct % 2) != 0) && (end_idx >= begin_idx)) || (((begin_oct % 2) == 0) && (end_idx <= begin_idx))))
+	{
+
+	}
 
 }
 void movement_bgtask(void)
