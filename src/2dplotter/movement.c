@@ -9,7 +9,8 @@ cmd_t cmd_handler = {0};
 
 static RetType bresenhamLine(int16_t abs_dscan, int16_t abs_dpick, uint8_t octant);
 static uint8_t findOctant(int16_t dx, int16_t dy);
-static xy_step_t convertStepByOctant(xy_step_t source, uint8_t octant);
+static xy_step_t convertStepFromToOctant0(xy_step_t source, uint8_t octant);
+static xy_position_t convertPosFromToOctant1(xy_position_t source, uint8_t octant);
 static RetType appendAndconvertStep(xy_step_t step, uint8_t octant);
 static RetType fillAllWithFixedStep(xy_step_t step, uint16_t len, uint8_t octant);
 static RetType linearLine(int16_t dx, int16_t dy);
@@ -98,7 +99,7 @@ static uint8_t findOctant(int16_t dx, int16_t dy)
 	return octant;
 }
 
-static xy_step_t convertStepByOctant(xy_step_t source, uint8_t octant)
+static xy_step_t convertStepFromToOctant0(xy_step_t source, uint8_t octant)
 {
 	xy_step_t dest = {STEP_NONE, STEP_NONE};
 
@@ -143,12 +144,57 @@ static xy_step_t convertStepByOctant(xy_step_t source, uint8_t octant)
 	return dest;
 }
 
+static xy_position_t convertPosFromToOctant1(xy_position_t source, uint8_t octant)
+{
+	xy_position_t dest = {0, 0};
+
+		switch (octant)
+		{
+		case 0:
+			dest.x = source.y;
+			dest.y = source.x;
+			break;
+		case 1:
+			dest.x = source.x;
+			dest.y = source.y;
+			break;
+		case 2:
+			dest.x = -1*source.x;
+			dest.y = source.y;
+			break;
+		case 3:
+			dest.x = -1*source.y;
+			dest.y = source.x;
+			break;
+		case 4:
+			dest.x = -1*source.y;
+			dest.y = -1*source.x;
+			break;
+		case 5:
+			dest.x = -1*source.x;
+			dest.y = -1*source.y;
+			break;
+		case 6:
+			dest.x = source.x;
+			dest.y = -1*source.y;
+			break;
+		case 7:
+			dest.x = source.y;
+			dest.y = -1*source.x;
+			break;
+		default:
+			break;
+		}
+
+		return dest;
+}
+
 static RetType appendAndconvertStep(xy_step_t step, uint8_t octant)
 {
 	xy_step_t final_step;
 	RetType ret = Ret_NotOK;
 
-	final_step = convertStepByOctant(step, octant);
+	final_step = convertStepFromToOctant0(step, octant);
 	ret = append_step_to_mission(final_step.step_x, final_step.step_y);
 
 	return ret;
@@ -159,7 +205,7 @@ static RetType fillAllWithFixedStep(xy_step_t step, uint16_t len, uint8_t octant
 	xy_step_t final_step;
 	RetType ret = Ret_NotOK;
 
-	final_step = convertStepByOctant(step, octant);
+	final_step = convertStepFromToOctant0(step, octant);
 
 	while (len)
 	{
@@ -292,6 +338,26 @@ static RetType freeMove(int16_t dx, int16_t dy)
 	return Ret_OK;
 }
 
+static uint16_t findindex(xy_position_t pos, uint8_t octant, int16_t* ytb, uint16_t len)
+{
+	xy_position_t octant1pos;
+
+	octant1pos = convertPosFromToOctant1(pos, octant);
+
+	if (octant1pos.x > len)
+	{
+		/* error case*/
+		return CALC_INVALID_NUM;
+	}
+
+	if (abs(octant1pos.y - ytb[octant1pos.x]) <= CALC_TOLERENCE)
+	{
+		/* found the point */
+		return octant1pos.x;
+	}
+
+	return CALC_INVALID_NUM;
+}
 /*
  * center [dx, dy]: relative position of center point from current
  * end [dx, dy]: relative position of end point from current*/
@@ -317,7 +383,7 @@ static RetType cwArc(xy_position_t center, xy_position_t end)
 
 	/* we should see not much differences between r0 and r1*/
 	tmp = r0 - r1;
-	if (((double)-1 > tmp) && ((double)1 < tmp))
+	if (((double)CALC_TOLERENCE_NEG >= tmp) && ((double)CALC_TOLERENCE <= tmp))
 	{
 		/* big tolerance */
 		return ret;
@@ -335,7 +401,10 @@ static RetType cwArc(xy_position_t center, xy_position_t end)
 	cnt = midPointArcOctant1(radius, ytb);
 
 	begin_oct = findOctant(beginc.x, beginc.y);
+	begin_idx = findindex(beginc, begin_oct, ytb, cnt);
 	end_oct = findOctant(endc.x, endc.y);
+	end_idx = findindex(endc, end_oct, ytb, cnt);
+
 
 }
 void movement_bgtask(void)
