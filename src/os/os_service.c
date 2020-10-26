@@ -7,6 +7,7 @@
 
 #include "movement.h"
 #include "stepper.h"
+#include "servo.h"
 
 #if (SYSCFG_BUTTON_SUPPORT == SYSCFG_USED)
 #include "port.h"

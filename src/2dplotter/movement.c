@@ -16,6 +16,8 @@ static RetType appendAndconvertStep(xy_step_t step, uint8_t octant);
 static RetType fillAllWithFixedStep(xy_step_t step, uint16_t len, uint8_t octant);
 static RetType linearLine(int16_t dx, int16_t dy);
 static RetType freeMove(int16_t dx, int16_t dy);
+static RetType copyToFinal(uint16_t start_idx, uint16_t stop_idx, uint8_t octant, int16_t* ytb, uint8_t start_flag);
+static uint16_t midPointArcOctant1(int16_t radius, int16_t* ytable);
 
 void stepper_test(void)
 {
@@ -366,7 +368,7 @@ static RetType copyToFinal(uint16_t start_idx, uint16_t stop_idx, uint8_t octant
 	xy_position_t source, dest;
 	static xy_position_t pre_pos;
 	step_t x, y;
-
+	RetType ret = Ret_NotOK;
 
 	if (start_flag == TRUE)
 	{
@@ -390,7 +392,38 @@ static RetType copyToFinal(uint16_t start_idx, uint16_t stop_idx, uint8_t octant
 		source.y = ytb[idx];
 		dest = convertPosFromToOctant1(source, octant);
 
-		x = x_cwdir_table(octant)
+		switch (dest.x - pre_pos.x)
+		{
+		case 0:
+			x = STEP_NONE;
+			break;
+		case 1:
+			x = STEP_FORWARD;
+			break;
+		case -1:
+			x = STEP_BACKWARD;
+			break;
+		}
+
+		switch (dest.y - pre_pos.y)
+		{
+		case 0:
+			y = STEP_NONE;
+			break;
+		case 1:
+			y = STEP_FORWARD;
+			break;
+		case -1:
+			y = STEP_BACKWARD;
+			break;
+		}
+
+		ret = append_step_to_mission(x, y);
+
+		if (ret != Ret_OK)
+		{
+			break;
+		}
 		if (start_idx < stop_idx)
 		{
 			idx++;
@@ -400,12 +433,14 @@ static RetType copyToFinal(uint16_t start_idx, uint16_t stop_idx, uint8_t octant
 			idx--;
 		}
 	}
+
+	return ret;
 }
 
 /*
  * center [dx, dy]: relative position of center point from current
  * end [dx, dy]: relative position of end point from current*/
-static RetType cwArc(xy_position_t center, xy_position_t end)
+static RetType arc(xy_position_t center, xy_position_t end)
 {
 	xy_position_t beginc;
 	xy_position_t endc;
@@ -413,7 +448,7 @@ static RetType cwArc(xy_position_t center, xy_position_t end)
 	int16_t radius;
 	int16_t ytb[MAX_STEP_PER_CIRCLE_OCTANT];
 	uint16_t cnt = 0;
-	uint8_t begin_oct, end_oct;
+	uint8_t begin_oct, end_oct, cur_oct;
 	uint16_t begin_idx, end_idx;
 	RetType ret = Ret_NotOK;
 
@@ -441,7 +476,6 @@ static RetType cwArc(xy_position_t center, xy_position_t end)
 		radius++;
 	}
 
-
 	cnt = midPointArcOctant1(radius, ytb);
 
 	begin_oct = findOctant(beginc.x, beginc.y);
@@ -449,11 +483,51 @@ static RetType cwArc(xy_position_t center, xy_position_t end)
 	end_oct = findOctant(endc.x, endc.y);
 	end_idx = findindex(endc, end_oct, ytb, cnt);
 
+
 	if ((begin_oct == end_oct) && ((((begin_oct % 2) != 0) && (end_idx >= begin_idx)) || (((begin_oct % 2) == 0) && (end_idx <= begin_idx))))
 	{
-
+		copyToFinal(begin_idx, end_idx, begin_oct, ytb, TRUE);
 	}
+	else
+	{
+		if ((begin_oct % 2) != 0)
+		{
+			copyToFinal(begin_idx, (cnt - 2), begin_oct, ytb, TRUE);
+		}
+		else
+		{
+			copyToFinal(begin_idx, 1, begin_oct, ytb, TRUE);
+		}
 
+		cur_oct = begin_oct + 1;
+
+		while (cur_oct != end_oct)
+		{
+			if ((cur_oct % 2) != 0)
+			{
+				copyToFinal(0, (cnt - 2), cur_oct, ytb, FALSE);
+			}
+			else
+			{
+				copyToFinal((cnt - 1), 1, cur_oct, ytb, FALSE);
+			}
+
+			cur_oct++;
+			if (cur_oct > 7)
+			{
+				cur_oct = 0;
+			}
+		}
+
+		if ((end_oct % 2) != 0)
+		{
+			copyToFinal(0, end_idx, end_oct, ytb, FALSE);
+		}
+		else
+		{
+			copyToFinal((cnt - 1), end_idx, end_oct, ytb, FALSE);
+		}
+	}
 }
 void movement_bgtask(void)
 {
