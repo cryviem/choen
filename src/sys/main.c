@@ -2,7 +2,7 @@
 #include "os_service.h"
 #include "common_inc.h"
 #include "initialize.h"
-
+#include "movement.h"
 
 
 
@@ -31,6 +31,7 @@ void main(void)
 	while (1)
 	{
 		/* backgground tasks for such lowest prioroty */
+		movement_bgtask();
 	}
 }
 

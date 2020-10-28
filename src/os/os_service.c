@@ -82,14 +82,6 @@ priority: 0xF5 --> sixth
  */
 TASK(TaskOS_500ms)
 {
-//	print_text("TEST LOG:\n");
-//	print_num(-2536);
-//	print_text("\n");
-//	print_num(126536);
-	//print_text("\n");
-	//print_num(00126536);
-	//print_text("\n");
-	//print_num(-000126536);
 }
 
 void OS_initialize(void)
@@ -130,8 +122,8 @@ void prc_buttonstatus_v(void)
 
 	if (eventcnt > BUTTON_FILTERTIME)
 	{
-		//stepper_test();
-		servo_test();
+		stepper_test();
+		//servo_test();
 		/* button pressed detected */
 		eventcnt = 0;
 	}

@@ -22,9 +22,15 @@
 /* MAX_STEP_PER_CMD / 8 + 1 */
 #define MAX_STEP_PER_CIRCLE_OCTANT		473
 
-#define CALC_TOLERENCE						1
+#define CALC_TOLERENCE						 1
 #define CALC_TOLERENCE_NEG					-1
 #define CALC_INVALID_NUM					0x7FFF
+
+#define ARC_CW_PARTLYCIRCLE							 0
+#define ARC_CW_FULLCIRCLE							 1
+#define ARC_CCW_PARTLYCIRCLE						 2
+#define ARC_CCW_FULLCIRCLE							 3
+
 #define MOVE_FORWARD(x)					(x == TRUE)? STEP_FORWARD:STEP_NONE
 #define MOVE_BACKWARD(x)				(x == TRUE)? STEP_BACKWARD:STEP_NONE
 #define MOVE_REVERSE(x)					(x == STEP_FORWARD)? STEP_BACKWARD:((x == STEP_BACKWARD)? STEP_FORWARD:STEP_NONE)
@@ -46,6 +52,8 @@ typedef enum {
 	CMD_LINE,
 	CMD_CWARC,
 	CMD_CCWARC,
+	CMD_CWCIRCLE,
+	CMD_CCWCIRCLE,
 	CMD_INVALID
 } cmd_id_t;
 
@@ -67,5 +75,5 @@ typedef struct {
 
 /* CONFIG AREA */
 extern void stepper_test(void);
-
+extern void movement_bgtask(void);
 #endif /*_MOVEMENT_H_*/

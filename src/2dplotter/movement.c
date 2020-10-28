@@ -6,39 +6,37 @@
 
 xy_position_t	current_pos = {0};
 cmd_t cmd_handler = {0};
-step_t x_cwdir_table[8] = {STEP_FORWARD, STEP_FORWARD, STEP_FORWARD, STEP_FORWARD, STEP_BACKWARD, STEP_BACKWARD, STEP_BACKWARD, STEP_BACKWARD};
-step_t y_cwdir_table[8] = {STEP_BACKWARD, STEP_BACKWARD, STEP_FORWARD, STEP_FORWARD, STEP_FORWARD, STEP_FORWARD, STEP_BACKWARD, STEP_BACKWARD};
+
+int16_t circle_y_data[MAX_STEP_PER_CIRCLE_OCTANT];
+uint16_t circle_x_cnt = 0;
+
 static RetType bresenhamLine(int16_t abs_dscan, int16_t abs_dpick, uint8_t octant);
 static uint8_t findOctant(int16_t dx, int16_t dy);
+static uint16_t findindex(xy_position_t pos, uint8_t octant);
 static xy_step_t convertStepFromToOctant0(xy_step_t source, uint8_t octant);
 static xy_position_t convertPosFromToOctant1(xy_position_t source, uint8_t octant);
 static RetType appendAndconvertStep(xy_step_t step, uint8_t octant);
 static RetType fillAllWithFixedStep(xy_step_t step, uint16_t len, uint8_t octant);
 static RetType linearLine(int16_t dx, int16_t dy);
 static RetType freeMove(int16_t dx, int16_t dy);
-static RetType copyToFinal(uint16_t start_idx, uint16_t stop_idx, uint8_t octant, int16_t* ytb, uint8_t start_flag);
-static uint16_t midPointArcOctant1(int16_t radius, int16_t* ytable);
+static RetType posToStep(uint16_t start_idx, uint16_t stop_idx, uint8_t octant, uint8_t start_flag);
+static RetType cwArc(xy_position_t begin, xy_position_t end);
+static RetType ccwArc(xy_position_t begin, xy_position_t end);
+static RetType cwcircle(xy_position_t begin);
+static RetType ccwcircle(xy_position_t begin);
+static void midPointArcOctant1(int16_t radius);
+static RetType arc(xy_position_t center, xy_position_t end, uint8_t opt);
 
 void stepper_test(void)
 {
-	RetType ret;
-	uint16_t i;
-
-	ret = find_idle_mission();
-	if (ret != Ret_OK)
+	if (cmd_handler.status == CMD_STS_IDLE)
 	{
-		return;
+		cmd_handler.cmd = CMD_LINE;
+		cmd_handler.X = -20;
+		cmd_handler.Y = -40;
+		cmd_handler.status = CMD_STS_CALCULATING;
+		LED_BLUE_BLINK();
 	}
-
-	set_speed_for_mission(SPEED_3);
-
-	for (i = 0; i < 200; i++)
-	{
-		append_step_to_mission(STEP_FORWARD, STEP_FORWARD);
-	}
-
-	on_mission_ready();
-	LED_BLUE_BLINK();
 }
 
 /* FULL STEP MODE
@@ -206,17 +204,19 @@ static RetType appendAndconvertStep(xy_step_t step, uint8_t octant)
 static RetType fillAllWithFixedStep(xy_step_t step, uint16_t len, uint8_t octant)
 {
 	xy_step_t final_step;
+	uint16_t cnt = len;
 	RetType ret = Ret_NotOK;
 
 	final_step = convertStepFromToOctant0(step, octant);
 
-	while (len)
+	while (cnt)
 	{
 		ret = append_step_to_mission(final_step.step_x, final_step.step_y);
 		if (ret != Ret_OK)
 		{
 			break;
 		}
+		cnt--;
 	}
 
 	return ret;
@@ -260,17 +260,15 @@ static RetType bresenhamLine(int16_t abs_dscan, int16_t abs_dpick, uint8_t octan
 	return ret;
 }
 
-static uint16_t midPointArcOctant1(int16_t radius, int16_t* ytable)
+static void midPointArcOctant1(int16_t radius)
 {
-	uint16_t cnt = 0;
 	int16_t x = 0;
 	int16_t y = radius;
 	int16_t fm = 1 - radius;
 
 	while (x <= y)
 	{
-		ytable[x] = y;
-		cnt++;
+		circle_y_data[x] = y;
 
 		if (fm < 0)
 		{
@@ -284,8 +282,9 @@ static uint16_t midPointArcOctant1(int16_t radius, int16_t* ytable)
 		x++;
 	}
 
-	return cnt;
+	circle_x_cnt = (uint16_t)x;
 }
+
 /*
  * Note: this is blocking function */
 static RetType linearLine(int16_t dx, int16_t dy)
@@ -324,10 +323,14 @@ static RetType linearLine(int16_t dx, int16_t dy)
 		fixedstep.step_y = STEP_FORWARD;
 		ret = fillAllWithFixedStep(fixedstep, abs_dx, octant);
 	}
-	else
+	else if (abs_dx > abs_dy)
 	{
 		/* normal cases */
 		ret = bresenhamLine(abs_dx, abs_dy, octant);
+	}
+	else
+	{
+		ret = bresenhamLine(abs_dy, abs_dx, octant);
 	}
 
 	return ret;
@@ -341,19 +344,19 @@ static RetType freeMove(int16_t dx, int16_t dy)
 	return Ret_OK;
 }
 
-static uint16_t findindex(xy_position_t pos, uint8_t octant, int16_t* ytb, uint16_t len)
+static uint16_t findindex(xy_position_t pos, uint8_t octant)
 {
 	xy_position_t octant1pos;
 
 	octant1pos = convertPosFromToOctant1(pos, octant);
 
-	if (octant1pos.x > len)
+	if (octant1pos.x > circle_x_cnt)
 	{
 		/* error case*/
 		return CALC_INVALID_NUM;
 	}
 
-	if (abs(octant1pos.y - ytb[octant1pos.x]) <= CALC_TOLERENCE)
+	if (abs(octant1pos.y - circle_y_data[octant1pos.x]) <= CALC_TOLERENCE)
 	{
 		/* found the point */
 		return octant1pos.x;
@@ -362,7 +365,7 @@ static uint16_t findindex(xy_position_t pos, uint8_t octant, int16_t* ytb, uint1
 	return CALC_INVALID_NUM;
 }
 
-static RetType copyToFinal(uint16_t start_idx, uint16_t stop_idx, uint8_t octant, int16_t* ytb, uint8_t start_flag)
+static RetType posToStep(uint16_t start_idx, uint16_t stop_idx, uint8_t octant, uint8_t start_flag)
 {
 	uint16_t idx = start_idx;
 	xy_position_t source, dest;
@@ -372,10 +375,12 @@ static RetType copyToFinal(uint16_t start_idx, uint16_t stop_idx, uint8_t octant
 
 	if (start_flag == TRUE)
 	{
+		/*first point of arc, save as pre_pos for next reference*/
 		source.x = start_idx;
-		source.y = ytb[start_idx];
+		source.y = circle_y_data[start_idx];
 		pre_pos = convertPosFromToOctant1(source, octant);
 
+		/*move to next item*/
 		if (start_idx < stop_idx)
 		{
 			idx++;
@@ -389,7 +394,7 @@ static RetType copyToFinal(uint16_t start_idx, uint16_t stop_idx, uint8_t octant
 	while (idx != stop_idx)
 	{
 		source.x = idx;
-		source.y = ytb[idx];
+		source.y = circle_y_data[idx];
 		dest = convertPosFromToOctant1(source, octant);
 
 		switch (dest.x - pre_pos.x)
@@ -424,6 +429,10 @@ static RetType copyToFinal(uint16_t start_idx, uint16_t stop_idx, uint8_t octant
 		{
 			break;
 		}
+
+		/*update pre_pos*/
+		pre_pos = dest;
+
 		if (start_idx < stop_idx)
 		{
 			idx++;
@@ -433,84 +442,135 @@ static RetType copyToFinal(uint16_t start_idx, uint16_t stop_idx, uint8_t octant
 			idx--;
 		}
 	}
-
 	return ret;
 }
 
-/*
- * center [dx, dy]: relative position of center point from current
- * end [dx, dy]: relative position of end point from current*/
-static RetType arc(xy_position_t center, xy_position_t end)
+static RetType cwArc(xy_position_t begin, xy_position_t end)
 {
-	xy_position_t beginc;
-	xy_position_t endc;
-	double r0, r1, tmp;
-	int16_t radius;
-	int16_t ytb[MAX_STEP_PER_CIRCLE_OCTANT];
-	uint16_t cnt = 0;
 	uint8_t begin_oct, end_oct, cur_oct;
 	uint16_t begin_idx, end_idx;
 	RetType ret = Ret_NotOK;
 
-	beginc.x = 0 - center.x;
-	beginc.y = 0 - center.y;
-	endc.x = end.x - center.x;
-	endc.y = end.y - center.y;
+	begin_oct = findOctant(begin.x, begin.y);
+	begin_idx = findindex(begin, begin_oct);
 
-	r0 = sqrt(beginc.x*beginc.x + beginc.y*beginc.y);
-	r1 = sqrt(endc.x*endc.x + endc.y*endc.y);
-
-	/* we should see not much differences between r0 and r1*/
-	tmp = r0 - r1;
-	if (((double)CALC_TOLERENCE_NEG >= tmp) && ((double)CALC_TOLERENCE <= tmp))
-	{
-		/* big tolerance */
-		return ret;
-	}
-
-	tmp = (r0 + r1)/2;
-	radius = (int16_t)tmp;
-	if (tmp > (double)(radius + 0.5))
-	{
-		/* round to nearest*/
-		radius++;
-	}
-
-	cnt = midPointArcOctant1(radius, ytb);
-
-	begin_oct = findOctant(beginc.x, beginc.y);
-	begin_idx = findindex(beginc, begin_oct, ytb, cnt);
-	end_oct = findOctant(endc.x, endc.y);
-	end_idx = findindex(endc, end_oct, ytb, cnt);
-
+	end_oct = findOctant(end.x, end.y);
+	end_idx = findindex(end, end_oct);
 
 	if ((begin_oct == end_oct) && ((((begin_oct % 2) != 0) && (end_idx >= begin_idx)) || (((begin_oct % 2) == 0) && (end_idx <= begin_idx))))
 	{
-		copyToFinal(begin_idx, end_idx, begin_oct, ytb, TRUE);
+		ret = posToStep(begin_idx, end_idx, begin_oct, TRUE);
 	}
 	else
 	{
 		if ((begin_oct % 2) != 0)
 		{
-			copyToFinal(begin_idx, (cnt - 2), begin_oct, ytb, TRUE);
+			 ret = posToStep(begin_idx, (circle_x_cnt - 2), begin_oct, TRUE);
 		}
 		else
 		{
-			copyToFinal(begin_idx, 1, begin_oct, ytb, TRUE);
+			ret = posToStep(begin_idx, 1, begin_oct, TRUE);
 		}
 
-		cur_oct = begin_oct + 1;
+		if (ret != Ret_OK) return ret;
+
+		if (begin_oct == 0)
+		{
+			cur_oct = 7;
+		}
+		else
+		{
+			cur_oct = begin_oct - 1;
+		}
+
 
 		while (cur_oct != end_oct)
 		{
 			if ((cur_oct % 2) != 0)
 			{
-				copyToFinal(0, (cnt - 2), cur_oct, ytb, FALSE);
+				ret = posToStep(0, (circle_x_cnt - 2), cur_oct, FALSE);
 			}
 			else
 			{
-				copyToFinal((cnt - 1), 1, cur_oct, ytb, FALSE);
+				ret = posToStep((circle_x_cnt - 1), 1, cur_oct, FALSE);
 			}
+
+			if (ret != Ret_OK) return ret;
+
+
+			if (cur_oct == 0)
+			{
+				cur_oct = 7;
+			}
+			else
+			{
+				cur_oct--;
+			}
+		}
+
+		if ((end_oct % 2) != 0)
+		{
+			ret = posToStep(0, end_idx, end_oct, FALSE);
+		}
+		else
+		{
+			ret = posToStep((circle_x_cnt - 1), end_idx, end_oct, FALSE);
+		}
+	}
+
+	return ret;
+}
+
+static RetType ccwArc(xy_position_t begin, xy_position_t end)
+{
+	uint8_t begin_oct, end_oct, cur_oct;
+	uint16_t begin_idx, end_idx;
+	RetType ret = Ret_NotOK;
+
+	begin_oct = findOctant(begin.x, begin.y);
+	begin_idx = findindex(begin, begin_oct);
+
+	end_oct = findOctant(end.x, end.y);
+	end_idx = findindex(end, end_oct);
+
+	if ((begin_oct == end_oct) && ((((begin_oct % 2) == 0) && (end_idx >= begin_idx)) || (((begin_oct % 2) != 0) && (end_idx <= begin_idx))))
+	{
+		ret = posToStep(begin_idx, end_idx, begin_oct, TRUE);
+	}
+	else
+	{
+		if ((begin_oct % 2) == 0)
+		{
+			 ret = posToStep(begin_idx, (circle_x_cnt - 2), begin_oct, TRUE);
+		}
+		else
+		{
+			ret = posToStep(begin_idx, 1, begin_oct, TRUE);
+		}
+
+		if (ret != Ret_OK) return ret;
+
+		if (begin_oct == 7)
+		{
+			cur_oct = 0;
+		}
+		else
+		{
+			cur_oct = begin_oct + 1;
+		}
+
+		while (cur_oct != end_oct)
+		{
+			if ((cur_oct % 2) == 0)
+			{
+				ret = posToStep(0, (circle_x_cnt - 2), cur_oct, FALSE);
+			}
+			else
+			{
+				ret = posToStep((circle_x_cnt - 1), 1, cur_oct, FALSE);
+			}
+
+			if (ret != Ret_OK) return ret;
 
 			cur_oct++;
 			if (cur_oct > 7)
@@ -519,19 +579,209 @@ static RetType arc(xy_position_t center, xy_position_t end)
 			}
 		}
 
-		if ((end_oct % 2) != 0)
+		if ((end_oct % 2) == 0)
 		{
-			copyToFinal(0, end_idx, end_oct, ytb, FALSE);
+			ret = posToStep(0, end_idx, end_oct, FALSE);
 		}
 		else
 		{
-			copyToFinal((cnt - 1), end_idx, end_oct, ytb, FALSE);
+			ret = posToStep((circle_x_cnt - 1), end_idx, end_oct, FALSE);
 		}
 	}
+
+	return ret;
 }
+
+static RetType cwcircle(xy_position_t begin)
+{
+	uint8_t begin_oct, cur_oct;
+	uint16_t begin_idx;
+	RetType ret = Ret_NotOK;
+
+	begin_oct = findOctant(begin.x, begin.y);
+	begin_idx = findindex(begin, begin_oct);
+
+	if ((begin_oct % 2) != 0)
+	{
+		 ret = posToStep(begin_idx, (circle_x_cnt - 2), begin_oct, TRUE);
+	}
+	else
+	{
+		ret = posToStep(begin_idx, 1, begin_oct, TRUE);
+	}
+
+	if (ret != Ret_OK) return ret;
+
+	if (begin_oct == 0)
+	{
+		cur_oct = 7;
+	}
+	else
+	{
+		cur_oct = begin_oct - 1;
+	}
+
+	while (cur_oct != begin_oct)
+	{
+		if ((cur_oct % 2) != 0)
+		{
+			ret = posToStep(0, (circle_x_cnt - 2), cur_oct, FALSE);
+		}
+		else
+		{
+			ret = posToStep((circle_x_cnt - 1), 1, cur_oct, FALSE);
+		}
+
+		if (ret != Ret_OK) return ret;
+
+		if (cur_oct == 0)
+		{
+			cur_oct = 7;
+		}
+		else
+		{
+			cur_oct--;
+		}
+	}
+
+	if ((begin_oct % 2) != 0)
+	{
+		ret = posToStep(0, begin_idx, begin_oct, FALSE);
+	}
+	else
+	{
+		ret = posToStep((circle_x_cnt - 1), begin_idx, begin_oct, FALSE);
+	}
+
+	return ret;
+}
+
+static RetType ccwcircle(xy_position_t begin)
+{
+	uint8_t begin_oct, cur_oct;
+	uint16_t begin_idx;
+	RetType ret = Ret_NotOK;
+
+	begin_oct = findOctant(begin.x, begin.y);
+	begin_idx = findindex(begin, begin_oct);
+
+	if ((begin_oct % 2) == 0)
+	{
+		 ret = posToStep(begin_idx, (circle_x_cnt - 2), begin_oct, TRUE);
+	}
+	else
+	{
+		ret = posToStep(begin_idx, 1, begin_oct, TRUE);
+	}
+
+	if (ret != Ret_OK) return ret;
+
+	if (begin_oct == 7)
+	{
+		cur_oct = 0;
+	}
+	else
+	{
+		cur_oct = begin_oct + 1;
+	}
+
+	while (cur_oct != begin_oct)
+	{
+		if ((cur_oct % 2) == 0)
+		{
+			ret = posToStep(0, (circle_x_cnt - 2), cur_oct, FALSE);
+		}
+		else
+		{
+			ret = posToStep((circle_x_cnt - 1), 1, cur_oct, FALSE);
+		}
+
+		if (ret != Ret_OK) return ret;
+
+		cur_oct++;
+		if (cur_oct > 7)
+		{
+			cur_oct = 0;
+		}
+	}
+
+	if ((begin_oct % 2) == 0)
+	{
+		ret = posToStep(0, begin_idx, begin_oct, FALSE);
+	}
+	else
+	{
+		ret = posToStep((circle_x_cnt - 1), begin_idx, begin_oct, FALSE);
+	}
+
+	return ret;
+}
+/*
+ * center [dx, dy]: relative position of center point from current
+ * end [dx, dy]: relative position of end point from current*/
+static RetType arc(xy_position_t center, xy_position_t end, uint8_t opt)
+{
+	xy_position_t beginc = {0};
+	xy_position_t endc = {0};
+	double r0, r1, tmp;
+	int16_t radius;
+	RetType ret = Ret_NotOK;
+
+	beginc.x = 0 - center.x;
+	beginc.y = 0 - center.y;
+	r0 = sqrt(beginc.x*beginc.x + beginc.y*beginc.y);
+	tmp = r0;
+
+	if ((opt == ARC_CW_PARTLYCIRCLE) || (opt == ARC_CW_PARTLYCIRCLE))
+	{
+		endc.x = end.x - center.x;
+		endc.y = end.y - center.y;
+		r1 = sqrt(endc.x*endc.x + endc.y*endc.y);
+		/* we should see not much differences between r0 and r1*/
+		tmp = r0 - r1;
+		if (((double)CALC_TOLERENCE_NEG >= tmp) && ((double)CALC_TOLERENCE <= tmp))
+		{
+			/* big tolerance */
+			return ret;
+		}
+		tmp = (r0 + r1)/2;
+	}
+
+	radius = (int16_t)tmp;
+	if (tmp > (double)(radius + 0.5))
+	{
+		/* round to nearest*/
+		radius++;
+	}
+
+	/*fill data to circle_y_data[] and circle_x_cnt*/
+	midPointArcOctant1(radius);
+
+	switch (opt)
+	{
+	case ARC_CW_PARTLYCIRCLE:
+		ret = cwArc(beginc, endc);
+		break;
+	case ARC_CW_FULLCIRCLE:
+		ret = cwcircle(beginc);
+		break;
+	case ARC_CCW_PARTLYCIRCLE:
+		ret = ccwArc(beginc, endc);
+		break;
+	case ARC_CCW_FULLCIRCLE:
+		ret = ccwcircle(beginc);
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+}
+
 void movement_bgtask(void)
 {
 	RetType ret;
+	xy_position_t center, end;
 
 	if (cmd_handler.status == CMD_STS_IDLE)
 	{
@@ -578,8 +828,92 @@ void movement_bgtask(void)
 		}
 		break;
 	case CMD_CWARC:
+		ret = find_idle_mission();
+		if (ret == Ret_OK)
+		{
+			center.x = cmd_handler.I;
+			center.y = cmd_handler.J;
+			end.x = cmd_handler.X;
+			end.y = cmd_handler.Y;
+
+			ret = arc(center, end, ARC_CW_PARTLYCIRCLE);
+
+			if (ret == Ret_OK)
+			{
+				on_mission_ready();
+				cmd_handler.status = CMD_STS_IDLE;
+			}
+			else
+			{
+				cmd_handler.status = CMD_STS_ERROR;
+			}
+		}
 		break;
 	case CMD_CCWARC:
+		ret = find_idle_mission();
+		if (ret == Ret_OK)
+		{
+			center.x = cmd_handler.I;
+			center.y = cmd_handler.J;
+			end.x = cmd_handler.X;
+			end.y = cmd_handler.Y;
+
+			ret = arc(center, end, ARC_CCW_PARTLYCIRCLE);
+
+			if (ret == Ret_OK)
+			{
+				on_mission_ready();
+				cmd_handler.status = CMD_STS_IDLE;
+			}
+			else
+			{
+				cmd_handler.status = CMD_STS_ERROR;
+			}
+		}
+		break;
+	case CMD_CWCIRCLE:
+		ret = find_idle_mission();
+		if (ret == Ret_OK)
+		{
+			center.x = cmd_handler.I;
+			center.y = cmd_handler.J;
+			end.x = CALC_INVALID_NUM;
+			end.y = CALC_INVALID_NUM;
+
+			ret = arc(center, end, ARC_CW_FULLCIRCLE);
+
+			if (ret == Ret_OK)
+			{
+				on_mission_ready();
+				cmd_handler.status = CMD_STS_IDLE;
+			}
+			else
+			{
+				cmd_handler.status = CMD_STS_ERROR;
+			}
+		}
+		break;
+	case CMD_CCWCIRCLE:
+		ret = find_idle_mission();
+		if (ret == Ret_OK)
+		{
+			center.x = cmd_handler.I;
+			center.y = cmd_handler.J;
+			end.x = CALC_INVALID_NUM;
+			end.y = CALC_INVALID_NUM;
+
+			ret = arc(center, end, ARC_CCW_FULLCIRCLE);
+
+			if (ret == Ret_OK)
+			{
+				on_mission_ready();
+				cmd_handler.status = CMD_STS_IDLE;
+			}
+			else
+			{
+				cmd_handler.status = CMD_STS_ERROR;
+			}
+		}
 		break;
 	default:
 		break;
