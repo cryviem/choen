@@ -14,7 +14,8 @@ static RetType bresenhamLine(int16_t abs_dscan, int16_t abs_dpick, uint8_t octan
 static uint8_t findOctant(int16_t dx, int16_t dy);
 static uint16_t findindex(xy_position_t pos, uint8_t octant);
 static xy_step_t convertStepFromToOctant0(xy_step_t source, uint8_t octant);
-static xy_position_t convertPosFromToOctant1(xy_position_t source, uint8_t octant);
+static xy_position_t convertPosFromOctant1(xy_position_t source, uint8_t octant);
+static xy_position_t convertPosToOctant1(xy_position_t source, uint8_t octant);
 static RetType appendAndconvertStep(xy_step_t step, uint8_t octant);
 static RetType fillAllWithFixedStep(xy_step_t step, uint16_t len, uint8_t octant);
 static RetType linearLine(int16_t dx, int16_t dy);
@@ -24,19 +25,20 @@ static RetType cwArc(xy_position_t begin, xy_position_t end);
 static RetType ccwArc(xy_position_t begin, xy_position_t end);
 static RetType cwcircle(xy_position_t begin);
 static RetType ccwcircle(xy_position_t begin);
-static void midPointArcOctant1(int16_t radius);
+static void midPointArcOctant1(uint16_t radius);
 static RetType arc(xy_position_t center, xy_position_t end, uint8_t opt);
 
 void stepper_test(void)
 {
 	if (cmd_handler.status == CMD_STS_IDLE)
 	{
-		cmd_handler.cmd = CMD_LINE;
-		cmd_handler.X = -20;
-		cmd_handler.Y = -40;
+		cmd_handler.cmd = CMD_CWCIRCLE;
+		cmd_handler.I = 50;
+		cmd_handler.J = 0;
 		cmd_handler.status = CMD_STS_CALCULATING;
 		LED_BLUE_BLINK();
 	}
+
 }
 
 /* FULL STEP MODE
@@ -145,7 +147,7 @@ static xy_step_t convertStepFromToOctant0(xy_step_t source, uint8_t octant)
 	return dest;
 }
 
-static xy_position_t convertPosFromToOctant1(xy_position_t source, uint8_t octant)
+static xy_position_t convertPosFromOctant1(xy_position_t source, uint8_t octant)
 {
 	xy_position_t dest = {0, 0};
 
@@ -189,6 +191,52 @@ static xy_position_t convertPosFromToOctant1(xy_position_t source, uint8_t octan
 
 		return dest;
 }
+
+static xy_position_t convertPosToOctant1(xy_position_t source, uint8_t octant)
+{
+	xy_position_t dest = {0, 0};
+
+		switch (octant)
+		{
+		case 0:
+			dest.x = source.y;
+			dest.y = source.x;
+			break;
+		case 1:
+			dest.x = source.x;
+			dest.y = source.y;
+			break;
+		case 2:
+			dest.x = -1*source.x;
+			dest.y = source.y;
+			break;
+		case 3:
+			dest.x = source.y;
+			dest.y = -1*source.x;
+			break;
+		case 4:
+			dest.x = -1*source.y;
+			dest.y = -1*source.x;
+			break;
+		case 5:
+			dest.x = -1*source.x;
+			dest.y = -1*source.y;
+			break;
+		case 6:
+			dest.x = source.x;
+			dest.y = -1*source.y;
+			break;
+		case 7:
+			dest.x = -1*source.y;
+			dest.y = source.x;
+			break;
+		default:
+			break;
+		}
+
+		return dest;
+}
+
 
 static RetType appendAndconvertStep(xy_step_t step, uint8_t octant)
 {
@@ -260,11 +308,11 @@ static RetType bresenhamLine(int16_t abs_dscan, int16_t abs_dpick, uint8_t octan
 	return ret;
 }
 
-static void midPointArcOctant1(int16_t radius)
+static void midPointArcOctant1(uint16_t radius)
 {
 	int16_t x = 0;
 	int16_t y = radius;
-	int16_t fm = 1 - radius;
+	int16_t fm = 1 - (int16_t)radius;
 
 	while (x <= y)
 	{
@@ -348,7 +396,7 @@ static uint16_t findindex(xy_position_t pos, uint8_t octant)
 {
 	xy_position_t octant1pos;
 
-	octant1pos = convertPosFromToOctant1(pos, octant);
+	octant1pos = convertPosToOctant1(pos, octant);
 
 	if (octant1pos.x > circle_x_cnt)
 	{
@@ -371,14 +419,14 @@ static RetType posToStep(uint16_t start_idx, uint16_t stop_idx, uint8_t octant, 
 	xy_position_t source, dest;
 	static xy_position_t pre_pos;
 	step_t x, y;
-	RetType ret = Ret_NotOK;
+	RetType ret = Ret_OK;
 
 	if (start_flag == TRUE)
 	{
 		/*first point of arc, save as pre_pos for next reference*/
 		source.x = start_idx;
 		source.y = circle_y_data[start_idx];
-		pre_pos = convertPosFromToOctant1(source, octant);
+		pre_pos = convertPosFromOctant1(source, octant);
 
 		/*move to next item*/
 		if (start_idx < stop_idx)
@@ -395,7 +443,7 @@ static RetType posToStep(uint16_t start_idx, uint16_t stop_idx, uint8_t octant, 
 	{
 		source.x = idx;
 		source.y = circle_y_data[idx];
-		dest = convertPosFromToOctant1(source, octant);
+		dest = convertPosFromOctant1(source, octant);
 
 		switch (dest.x - pre_pos.x)
 		{
@@ -723,39 +771,34 @@ static RetType arc(xy_position_t center, xy_position_t end, uint8_t opt)
 {
 	xy_position_t beginc = {0};
 	xy_position_t endc = {0};
-	double r0, r1, tmp;
-	int16_t radius;
+	uint16_t r0, r1;
+	uint32_t tmp;
 	RetType ret = Ret_NotOK;
 
 	beginc.x = 0 - center.x;
 	beginc.y = 0 - center.y;
-	r0 = sqrt(beginc.x*beginc.x + beginc.y*beginc.y);
-	tmp = r0;
+	tmp = (uint32_t)(beginc.x * beginc.x + beginc.y * beginc.y);
+	r0 = (uint16_t)SquareRootRounded(tmp);
 
 	if ((opt == ARC_CW_PARTLYCIRCLE) || (opt == ARC_CW_PARTLYCIRCLE))
 	{
 		endc.x = end.x - center.x;
 		endc.y = end.y - center.y;
-		r1 = sqrt(endc.x*endc.x + endc.y*endc.y);
+		tmp = (uint32_t)(endc.x * endc.x + endc.y * endc.y);
+		r1 = (uint16_t)SquareRootRounded(tmp);
+
 		/* we should see not much differences between r0 and r1*/
 		tmp = r0 - r1;
-		if (((double)CALC_TOLERENCE_NEG >= tmp) && ((double)CALC_TOLERENCE <= tmp))
+		if ((CALC_TOLERENCE_NEG >= tmp) && (CALC_TOLERENCE <= tmp))
 		{
 			/* big tolerance */
 			return ret;
 		}
-		tmp = (r0 + r1)/2;
 	}
 
-	radius = (int16_t)tmp;
-	if (tmp > (double)(radius + 0.5))
-	{
-		/* round to nearest*/
-		radius++;
-	}
 
 	/*fill data to circle_y_data[] and circle_x_cnt*/
-	midPointArcOctant1(radius);
+	midPointArcOctant1(r0);
 
 	switch (opt)
 	{
@@ -815,6 +858,7 @@ void movement_bgtask(void)
 		ret = find_idle_mission();
 		if (ret == Ret_OK)
 		{
+			set_speed_for_mission(SPEED_3);
 			ret = linearLine(cmd_handler.X, cmd_handler.Y);
 			if (ret == Ret_OK)
 			{
@@ -831,6 +875,7 @@ void movement_bgtask(void)
 		ret = find_idle_mission();
 		if (ret == Ret_OK)
 		{
+			set_speed_for_mission(SPEED_3);
 			center.x = cmd_handler.I;
 			center.y = cmd_handler.J;
 			end.x = cmd_handler.X;
@@ -853,6 +898,7 @@ void movement_bgtask(void)
 		ret = find_idle_mission();
 		if (ret == Ret_OK)
 		{
+			set_speed_for_mission(SPEED_3);
 			center.x = cmd_handler.I;
 			center.y = cmd_handler.J;
 			end.x = cmd_handler.X;
@@ -875,6 +921,7 @@ void movement_bgtask(void)
 		ret = find_idle_mission();
 		if (ret == Ret_OK)
 		{
+			set_speed_for_mission(SPEED_3);
 			center.x = cmd_handler.I;
 			center.y = cmd_handler.J;
 			end.x = CALC_INVALID_NUM;
@@ -897,6 +944,7 @@ void movement_bgtask(void)
 		ret = find_idle_mission();
 		if (ret == Ret_OK)
 		{
+			set_speed_for_mission(SPEED_3);
 			center.x = cmd_handler.I;
 			center.y = cmd_handler.J;
 			end.x = CALC_INVALID_NUM;

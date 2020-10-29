@@ -46,5 +46,6 @@ typedef enum {
 extern void pf_memset(void *s, uint8_t c, uint16_t n);
 extern void pf_memcpy(void *des, void *src, uint16_t n);
 extern uint16_t pf_strlen(uint8_t *str);
+extern uint32_t SquareRootRounded(uint32_t a_nInput);
 
 #endif /* _COMMON_INC_H_ */
