@@ -93,7 +93,7 @@ const Port_ConfigType		User_PortConfig[] =
 		PORT_PIN_HW_PUSHPULL,
 		PORT_PIN_HW_NO_PUPD,
 
-		PORT_PIN_MODE_TIM_3_5,
+		PORT_PIN_MODE_TIM_8_11,
 		PORT_PIN_OUT,
 		PORT_PIN_LEVEL_LOW,
 	},
@@ -102,7 +102,7 @@ const Port_ConfigType		User_PortConfig[] =
 		PORT_PIN_HW_PUSHPULL,
 		PORT_PIN_HW_NO_PUPD,
 
-		PORT_PIN_MODE_TIM_3_5,
+		PORT_PIN_MODE_TIM_8_11,
 		PORT_PIN_OUT,
 		PORT_PIN_LEVEL_LOW,
 	},
@@ -111,7 +111,7 @@ const Port_ConfigType		User_PortConfig[] =
 		PORT_PIN_HW_PUSHPULL,
 		PORT_PIN_HW_NO_PUPD,
 
-		PORT_PIN_MODE_TIM_3_5,
+		PORT_PIN_MODE_TIM_8_11,
 		PORT_PIN_OUT,
 		PORT_PIN_LEVEL_LOW,
 	},
@@ -120,7 +120,7 @@ const Port_ConfigType		User_PortConfig[] =
 		PORT_PIN_HW_PUSHPULL,
 		PORT_PIN_HW_NO_PUPD,
 
-		PORT_PIN_MODE_TIM_3_5,
+		PORT_PIN_MODE_TIM_8_11,
 		PORT_PIN_OUT,
 		PORT_PIN_LEVEL_LOW,
 	},

@@ -34,6 +34,7 @@
 #define MOVE_FORWARD(x)					(x == TRUE)? STEP_FORWARD:STEP_NONE
 #define MOVE_BACKWARD(x)				(x == TRUE)? STEP_BACKWARD:STEP_NONE
 #define MOVE_REVERSE(x)					(x == STEP_FORWARD)? STEP_BACKWARD:((x == STEP_BACKWARD)? STEP_FORWARD:STEP_NONE)
+#define POS_TO_STEP(x)					(x > 0)? STEP_FORWARD:((x < 0)? STEP_BACKWARD:STEP_NONE)
 
 typedef struct {
 	int16_t	x;

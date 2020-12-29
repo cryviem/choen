@@ -15,18 +15,18 @@
  * update rate is supported */
 #define	TIMER_TYPE_ADVANCED				1
 
-#define	TIMER_TYPE						TIMER_TYPE_BASIC
+#define	TIMER_TYPE						TIMER_TYPE_ADVANCED
 
 #if (TIMER_TYPE == TIMER_TYPE_ADVANCED)
-/* timer1
- * PINs: 	CC1 PA8		PE9
- * 			CC2 PA9		PE11
- * 			CC3 PA10	PE13
- * 			CC4 PA11	PE14
- * DMA:		DMA2 stream5 channel6
+/* timer8
+ * PINs: 	CC1 PC6
+ * 			CC2 PC7
+ * 			CC3 PC8
+ * 			CC4 PC9
+ * DMA:		DMA2 stream1 channel7
  */
-#define TIM_REG							TIM1
-#define DMA_HANDLER						DMA_HANDLER_TIM1UP
+#define TIM_REG							TIM8
+#define DMA_HANDLER						DMA_HANDLER_TIM8UP
 #else
 /* timer3
  * PINs: 	CC1 PC6
@@ -39,10 +39,14 @@
 #define DMA_HANDLER						DMA_HANDLER_TIM3UP
 #endif /*(TIMER_TYPE == TIMER_TYPE_ADVANCED)*/
 
-#define STEPPER_MISSION_MAX_SIZE					2048
+//#define STEPPER_MISSION_MAX_SIZE					22700
+#define STEPPER_MISSION_MAX_SIZE					1000
 #define STEPPER_NUM_OF_MISSIONS						2
 #define STEPPER_STEP_ZISE							50
 
+#define STEPPER_STARTING_SPEED						50		/* step/s or Hz */
+#define STEPPER_MAX_SPEED							50		/* step/s or Hz */
+#define STEPPER_ACCERATE							50
 
 /* ---------------- */
 
@@ -73,10 +77,10 @@ typedef enum{
 } rd_wr_sts_t;
 
 typedef struct {
-	speed_t											speed;
 	uint8_t											upd_rate;
+	uint16_t										speed;		/* step/s or Hz */
 	uint16_t 										actsize;
-	uint16_t										data[STEPPER_MISSION_MAX_SIZE];
+	uint32_t										data[STEPPER_MISSION_MAX_SIZE];
 } mission_t;
 
 typedef struct {

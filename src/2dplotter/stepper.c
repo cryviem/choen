@@ -14,15 +14,6 @@ CC4			Y_axis direction
 state_machine_t sm_state = SM_IDLE;
 mission_pool_t mission_pool = {0};
 
-const uint16_t speed_table[SPEED_INVALID] =
-{
-		10000,
-		5000,
-		1000,
-		500,
-		100
-};
-
 void stepper_mission_start(mission_t* mission);
 mission_t* get_ready_mission(void);
 void on_mission_completed(void);
@@ -36,18 +27,17 @@ void stepper_init(void)
 	TIM_REG->CR1 |= TIM_CR1_ARPE;
 
 	/* CR2 reset value: 0x0000 */
-
+	TIM_REG->CR2 |= TIM_CR2_CCDS;
 	/* CCMR1 and CCMR2, reset value: 0x0000 */
-	/* initialize with "force low" all the channel */
-	TIM_REG->CCMR1 = 0x4848;
-	TIM_REG->CCMR2 = 0x4848;
-
+	/* Set 4 channels to PWM2 */
+	TIM_REG->CCMR1 = 0x7878;
+	TIM_REG->CCMR2 = 0x7878;
 
 	/* DCR reset value: 0x0000 */
-	/* Set DBA to 6 (00110), start from CCMR1 */
-	/* Set DBL to 0 (00001), 2 transfer */
-	/* Purpose: CCMR1 and CCMR2 will be DMA feed every cycle */
-	TIM_REG->DCR |= (TIM_DCR_DBL_0 | TIM_DCR_DBA_2 | TIM_DCR_DBA_1);
+	/* Set DBA to 11 (01011), start from ARR */
+	/* Set DBL to 5 (00101), 6 transfers */
+	/* Purpose: ARR-CCR1-CCR2-CCR3-CCR4 will be DMA feed every cycle */
+	TIM_REG->DCR |= (TIM_DCR_DBL_2 |TIM_DCR_DBL_0 | TIM_DCR_DBA_3 | TIM_DCR_DBA_1 | TIM_DCR_DBA_0);
 
 	/* Set counting clock to 100 kHz */
 #if (TIMER_TYPE == TIMER_TYPE_ADVANCED)
@@ -59,30 +49,14 @@ void stepper_init(void)
 	//TIM_REG->PSC = 8399;	//T = 100 us for test purpose
 #endif /*(TIMER_TYPE == TIMER_TYPE_ADVANCED)*/
 
-
-	/* initialize the pool */
-	pf_memset(&mission_pool, 0, sizeof(mission_pool));
-
 	/*CCER reset value: 0x0000*/
 	/* Active high, Enable output*/
 	TIM_REG->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E);
-
-#if (TIMER_TYPE == TIMER_TYPE_ADVANCED)
-	/* Advance timer need to set MOE bit for output enabling */
-	TIM_REG->BDTR |= TIM_BDTR_MOE;
-#endif
 
 }
 
 void stepper_mission_start(mission_t* mission)
 {
-	/* Speed configuration */
-	TIM_REG->ARR = speed_table[mission->speed];
-	TIM_REG->CCR1 = TIM_REG->ARR - STEPPER_STEP_ZISE;
-	TIM_REG->CCR3 = TIM_REG->ARR - STEPPER_STEP_ZISE;
-	TIM_REG->CCR2 = 0;
-	TIM_REG->CCR4 = 0;
-
 	/* Update rate configuration */
 #if (TIMER_TYPE == TIMER_TYPE_ADVANCED)
 	/* Only advance timers support this feature*/
@@ -96,10 +70,16 @@ void stepper_mission_start(mission_t* mission)
 	/* Enable UEV DMA request*/
 	TIM_REG->DIER |= TIM_DIER_UDE;
 
-	/* Generate CC2 event to let DMA update register for the first time */
+	/* Generate UG event to let DMA update register for the first time */
 	TIM_REG->EGR |= TIM_EGR_UG;
 
-	while (TIM_REG->EGR & TIM_EGR_UG); //wait for DMA update CCMR1 and CCMR2 finish
+	while (TIM_REG->EGR & TIM_EGR_UG); //wait for DMA update reg
+
+
+#if (TIMER_TYPE == TIMER_TYPE_ADVANCED)
+	/* Advance timer need to set MOE bit for output enabling */
+	TIM_REG->BDTR |= TIM_BDTR_MOE;
+#endif
 
 	/* Start counting */
 	TIM_REG->CR1 |= TIM_CR1_CEN;
@@ -133,7 +113,7 @@ void stepper_task(void)
 		case DMA_Status_Error:
 			LED_RED_BLINK();
 			print_text("stepper > dma error\n");
-			TIM_REG->DIER &= (~TIM_DIER_CC2DE);
+			TIM_REG->DIER &= (~TIM_DIER_UDE);
 			TIM_REG->CR1 &= (~TIM_CR1_CEN);
 			dma_cleanup(DMA_HANDLER);
 			sm_state = SM_ERROR;
@@ -141,7 +121,7 @@ void stepper_task(void)
 
 		case DMA_Status_Completed:
 			print_text("stepper > dma completed\n");
-			TIM_REG->DIER &= (~TIM_DIER_CC2DE);
+			TIM_REG->DIER &= (~TIM_DIER_UDE);
 			TIM_REG->CR1 &= (~TIM_CR1_CEN);
 			dma_cleanup(DMA_HANDLER);
 			on_mission_completed();
@@ -251,7 +231,6 @@ RetType find_idle_mission(void)
 
 	mission_pool.wptr = tmp;
 	mission_pool.mission[tmp].actsize = 0;
-	mission_pool.mission[tmp].speed = SPEED_0;
 	mission_pool.mission[tmp].upd_rate = 0;
 	mission_pool.wr_sts = STS_BUSY;
 	return Ret_OK;
@@ -288,18 +267,6 @@ RetType append_data_to_mission(uint16_t data)
 	return Ret_OK;
 }
 
-RetType set_speed_for_mission(speed_t speed)
-{
-	if (mission_pool.wr_sts != STS_BUSY)
-	{
-		/* find_idle_mission() has NOT been called successfully before */
-		return Ret_NotOK;
-	}
-
-	mission_pool.mission[mission_pool.wptr].speed = speed;
-
-	return Ret_OK;
-}
 
 RetType set_upd_rate_for_mission(uint8_t update_rate)
 {
@@ -327,10 +294,9 @@ void on_mission_ready(void)
 
 RetType append_step_to_mission(step_t stepx, step_t stepy)
 {
-	uint16_t x_reg, y_reg;
 
-	static uint16_t pre_x_reg = 0x4848;
-	static uint16_t pre_y_reg = 0x4848;
+	static uint16_t pre_x_dir = 501;
+	static uint16_t pre_y_dir = 501;
 
 	if (mission_pool.wr_sts != STS_BUSY)
 	{
@@ -338,47 +304,76 @@ RetType append_step_to_mission(step_t stepx, step_t stepy)
 		return Ret_NotOK;
 	}
 
-	if (mission_pool.mission[mission_pool.wptr].actsize > (STEPPER_MISSION_MAX_SIZE - 2))
+	if (mission_pool.mission[mission_pool.wptr].actsize > (STEPPER_MISSION_MAX_SIZE - 6))
 	{
 		/* buffer is full */
 		return Ret_NotOK;
 	}
 
+	/*
+	 * slot 1: ARR
+	 * slot 2: Unused.
+	 * slot 3: CCR1 - X step
+	 * slot 4: CCR2 - X dir
+	 * slot 5: CCR3 - Y step
+	 * slot 6: CCR4 - Y dir
+	 * */
+
+	/*ARR*/
+	mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = 500;
+	mission_pool.mission[mission_pool.wptr].actsize +=2;
+
+	/*CCR1&CCR2*/
 	switch (stepx)
 	{
 	case STEP_FORWARD:
-		x_reg = 0x4878;
+		mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = 450;
+		mission_pool.mission[mission_pool.wptr].actsize++;
+		mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = 501;
+		mission_pool.mission[mission_pool.wptr].actsize++;
+		pre_x_dir = 500;
 		break;
 	case STEP_BACKWARD:
-		x_reg = 0x5878;
+		mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = 450;
+		mission_pool.mission[mission_pool.wptr].actsize++;
+		mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = 0;
+		pre_x_dir = 0;
+		mission_pool.mission[mission_pool.wptr].actsize++;
 		break;
 	default:
 		/* logic to make dir pin not change unnecessary */
-		x_reg = (pre_x_reg & 0xFF00) + 0x0048;
+		mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = 501;
+		mission_pool.mission[mission_pool.wptr].actsize++;
+		mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = pre_x_dir;
+		mission_pool.mission[mission_pool.wptr].actsize++;
 		break;
 	}
 
+	/*CCR1&CCR2*/
 	switch (stepy)
 	{
 	case STEP_FORWARD:
-		y_reg = 0x4878;
+		mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = 450;
+		mission_pool.mission[mission_pool.wptr].actsize++;
+		mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = 501;
+		mission_pool.mission[mission_pool.wptr].actsize++;
+		pre_y_dir = 500;
 		break;
 	case STEP_BACKWARD:
-		y_reg = 0x5878;
+		mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = 450;
+		mission_pool.mission[mission_pool.wptr].actsize++;
+		mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = 0;
+		pre_y_dir = 0;
+		mission_pool.mission[mission_pool.wptr].actsize++;
 		break;
 	default:
 		/* logic to make dir pin not change unnecessary */
-		y_reg = (pre_y_reg & 0xFF00) + 0x0048;
+		mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = 501;
+		mission_pool.mission[mission_pool.wptr].actsize++;
+		mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = pre_y_dir;
+		mission_pool.mission[mission_pool.wptr].actsize++;
 		break;
 	}
-
-	mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = x_reg;
-	mission_pool.mission[mission_pool.wptr].actsize++;
-	mission_pool.mission[mission_pool.wptr].data[mission_pool.mission[mission_pool.wptr].actsize] = y_reg;
-	mission_pool.mission[mission_pool.wptr].actsize++;
-
-	pre_x_reg = x_reg;
-	pre_y_reg = y_reg;
 
 	return Ret_OK;
 }

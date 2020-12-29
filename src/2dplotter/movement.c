@@ -13,7 +13,7 @@ uint16_t circle_x_cnt = 0;
 static RetType bresenhamLine(int16_t abs_dscan, int16_t abs_dpick, uint8_t octant);
 static uint8_t findOctant(int16_t dx, int16_t dy);
 static uint16_t findindex(xy_position_t pos, uint8_t octant);
-static xy_step_t convertStepFromToOctant0(xy_step_t source, uint8_t octant);
+static xy_step_t convertStepFromOctant0(xy_step_t source, uint8_t octant);
 static xy_position_t convertPosFromOctant1(xy_position_t source, uint8_t octant);
 static xy_position_t convertPosToOctant1(xy_position_t source, uint8_t octant);
 static RetType appendAndconvertStep(xy_step_t step, uint8_t octant);
@@ -30,15 +30,31 @@ static RetType arc(xy_position_t center, xy_position_t end, uint8_t opt);
 
 void stepper_test(void)
 {
-	if (cmd_handler.status == CMD_STS_IDLE)
+	RetType ret;
+//	if (cmd_handler.status == CMD_STS_IDLE)
+//	{
+//		cmd_handler.cmd = CMD_CWCIRCLE;
+//		cmd_handler.I = 50;
+//		cmd_handler.J = 0;
+//		cmd_handler.status = CMD_STS_CALCULATING;
+//		LED_BLUE_BLINK();
+//	}
+	ret = find_idle_mission();
+	if (ret == Ret_OK)
 	{
-		cmd_handler.cmd = CMD_CWCIRCLE;
-		cmd_handler.I = 50;
-		cmd_handler.J = 0;
-		cmd_handler.status = CMD_STS_CALCULATING;
-		LED_BLUE_BLINK();
-	}
+		append_step_to_mission(STEP_FORWARD, STEP_BACKWARD);
+		append_step_to_mission(STEP_FORWARD, STEP_BACKWARD);
+		append_step_to_mission(STEP_NONE, STEP_FORWARD);
+		append_step_to_mission(STEP_BACKWARD, STEP_FORWARD);
+		append_step_to_mission(STEP_BACKWARD, STEP_FORWARD);
+		append_step_to_mission(STEP_FORWARD, STEP_NONE);
+		append_step_to_mission(STEP_FORWARD, STEP_NONE);
+		append_step_to_mission(STEP_BACKWARD, STEP_BACKWARD);
+		append_step_to_mission(STEP_BACKWARD, STEP_BACKWARD);
+		append_step_to_mission(STEP_BACKWARD, STEP_BACKWARD);
 
+		on_mission_ready();
+	}
 }
 
 /* FULL STEP MODE
@@ -102,7 +118,7 @@ static uint8_t findOctant(int16_t dx, int16_t dy)
 	return octant;
 }
 
-static xy_step_t convertStepFromToOctant0(xy_step_t source, uint8_t octant)
+static xy_step_t convertStepFromOctant0(xy_step_t source, uint8_t octant)
 {
 	xy_step_t dest = {STEP_NONE, STEP_NONE};
 
@@ -243,7 +259,7 @@ static RetType appendAndconvertStep(xy_step_t step, uint8_t octant)
 	xy_step_t final_step;
 	RetType ret = Ret_NotOK;
 
-	final_step = convertStepFromToOctant0(step, octant);
+	final_step = convertStepFromOctant0(step, octant);
 	ret = append_step_to_mission(final_step.step_x, final_step.step_y);
 
 	return ret;
@@ -255,7 +271,7 @@ static RetType fillAllWithFixedStep(xy_step_t step, uint16_t len, uint8_t octant
 	uint16_t cnt = len;
 	RetType ret = Ret_NotOK;
 
-	final_step = convertStepFromToOctant0(step, octant);
+	final_step = convertStepFromOctant0(step, octant);
 
 	while (cnt)
 	{
@@ -445,31 +461,8 @@ static RetType posToStep(uint16_t start_idx, uint16_t stop_idx, uint8_t octant, 
 		source.y = circle_y_data[idx];
 		dest = convertPosFromOctant1(source, octant);
 
-		switch (dest.x - pre_pos.x)
-		{
-		case 0:
-			x = STEP_NONE;
-			break;
-		case 1:
-			x = STEP_FORWARD;
-			break;
-		case -1:
-			x = STEP_BACKWARD;
-			break;
-		}
-
-		switch (dest.y - pre_pos.y)
-		{
-		case 0:
-			y = STEP_NONE;
-			break;
-		case 1:
-			y = STEP_FORWARD;
-			break;
-		case -1:
-			y = STEP_BACKWARD;
-			break;
-		}
+		x = POS_TO_STEP(dest.x - pre_pos.x);
+		y = POS_TO_STEP(dest.y - pre_pos.y);
 
 		ret = append_step_to_mission(x, y);
 
@@ -490,6 +483,17 @@ static RetType posToStep(uint16_t start_idx, uint16_t stop_idx, uint8_t octant, 
 			idx--;
 		}
 	}
+
+	source.x = stop_idx;
+	source.y = circle_y_data[stop_idx];
+	dest = convertPosFromOctant1(source, octant);
+
+	x = POS_TO_STEP(dest.x - pre_pos.x);
+	y = POS_TO_STEP(dest.y - pre_pos.y);
+
+	ret = append_step_to_mission(x, y);
+	pre_pos = dest;
+
 	return ret;
 }
 
@@ -858,7 +862,6 @@ void movement_bgtask(void)
 		ret = find_idle_mission();
 		if (ret == Ret_OK)
 		{
-			set_speed_for_mission(SPEED_3);
 			ret = linearLine(cmd_handler.X, cmd_handler.Y);
 			if (ret == Ret_OK)
 			{
@@ -875,7 +878,6 @@ void movement_bgtask(void)
 		ret = find_idle_mission();
 		if (ret == Ret_OK)
 		{
-			set_speed_for_mission(SPEED_3);
 			center.x = cmd_handler.I;
 			center.y = cmd_handler.J;
 			end.x = cmd_handler.X;
@@ -898,7 +900,6 @@ void movement_bgtask(void)
 		ret = find_idle_mission();
 		if (ret == Ret_OK)
 		{
-			set_speed_for_mission(SPEED_3);
 			center.x = cmd_handler.I;
 			center.y = cmd_handler.J;
 			end.x = cmd_handler.X;
@@ -921,7 +922,6 @@ void movement_bgtask(void)
 		ret = find_idle_mission();
 		if (ret == Ret_OK)
 		{
-			set_speed_for_mission(SPEED_3);
 			center.x = cmd_handler.I;
 			center.y = cmd_handler.J;
 			end.x = CALC_INVALID_NUM;
@@ -944,7 +944,6 @@ void movement_bgtask(void)
 		ret = find_idle_mission();
 		if (ret == Ret_OK)
 		{
-			set_speed_for_mission(SPEED_3);
 			center.x = cmd_handler.I;
 			center.y = cmd_handler.J;
 			end.x = CALC_INVALID_NUM;
