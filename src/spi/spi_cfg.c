@@ -8,6 +8,7 @@
 #include "spi_core.h"
 #include "dmacore.h"
 #include "spi_cfg.h"
+#include "fpga.h"
 
 
 /*	PRIVATE VARIABLE DECLARATION BEGIN*/
@@ -41,17 +42,17 @@ typedef struct {
 
 const spi_cfg_type spi_cfg_table[SPI_HANDLER_INVALID] = {
 	{
-		SPI_CHNL_2,
-		SPI_BR_DIV8,			/* 42/8= 5.12 Mhz */
-		SPI_CLKMODE_0,
-		SPI_OPTYPE_BIDIREC_TXFIRST,
-		FALSE,
-		FALSE,
-		FALSE,
-		0,
-		0,
+		SPI2,						/* SPI2 */
+		SPI_BR_DIV8,				/* 42/8= 5.12 Mhz */
+		SPI_CLKMODE_1,				/* CPHA = 1; CPOL = 0 */
+		SPI_OPTYPE_FULLDUPLEX,		/* full duplex mode */
+		TRUE,						/* 16 bits format */
+		FALSE,						/* MSB go first */
+		TRUE,						/* HW CS is used */
+		DMA_HANDLER_SPI2TX,			/*  */
+		DMA_HANDLER_SPI2RX,			/*  */
 		{
-			NULL,
+			&spi_rxcplt,
 			NULL,
 			NULL,
 			NULL
@@ -61,3 +62,48 @@ const spi_cfg_type spi_cfg_table[SPI_HANDLER_INVALID] = {
 
 
 spi_hdl_type spi_ramtable[SPI_HANDLER_INVALID] = {0};
+
+/* Wrapper SPI CORE with specific configured data */
+void spi_init(void)
+{
+	spicore_init(spi_cfg_table, spi_ramtable);
+}
+
+void spi1_start_fullduplex(void)
+{
+	spicore_start(&spi_ramtable[SPI_HANDLER_1], SPI_SW_FULL);
+}
+
+void spi1_stop(void)
+{
+	spicore_stop(&spi_ramtable[SPI_HANDLER_1]);
+}
+
+RetType spi1_transmit(uint16_t reqid, void* pdata, uint16_t len)
+{
+	return spicore_transmit(&spi_ramtable[SPI_HANDLER_1], reqid, pdata, len);
+}
+
+RetType spi1_transmit_dma(uint16_t reqid, void* pdata, uint16_t len)
+{
+	return spicore_transmit_dma(&spi_ramtable[SPI_HANDLER_1], reqid, pdata, len);
+}
+
+RetType spi1_receive_dma(uint16_t reqid, void* pdata, uint16_t len)
+{
+	return spicore_receive_dma(&spi_ramtable[SPI_HANDLER_1], reqid, pdata, len);
+}
+
+RetType spi1_fullduplex_work_dma(uint16_t reqid, void* ptxdata, void* prxdata, uint16_t len)
+{
+	return spicore_fullduplex_work_dma(&spi_ramtable[SPI_HANDLER_1], reqid, ptxdata, prxdata, len);
+}
+void spi_main_task(void)
+{
+	uint8_t indx;
+	for (indx = 0; indx < SPI_HANDLER_INVALID; indx++)
+	{
+		spiproc_maintask(&spi_ramtable[indx]);
+	}
+}
+

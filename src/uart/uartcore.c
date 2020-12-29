@@ -122,7 +122,6 @@ void uartcore_mainprocess_cycle10ms(uart_handletype* uarthandler)
 							{
 								UART_DMATX_ENABLE(uart_reg);
 								uarthandler->txstate = UART_TxSt_BUSY;
-								//uarthandler->txstate = UART_TxSt_TRGR;
 							}
 							else
 							{
@@ -138,13 +137,6 @@ void uartcore_mainprocess_cycle10ms(uart_handletype* uarthandler)
 					{
 						/* wait for manual trigger */
 					}
-					break;
-				}
-				case UART_TxSt_TRGR:
-				{
-					/* step2: enable DMA request from UART comp */
-					UART_DMATX_ENABLE(uart_reg);
-					uarthandler->txstate = UART_TxSt_BUSY;
 					break;
 				}
 				case UART_TxSt_BUSY:
@@ -200,7 +192,8 @@ void uartcore_mainprocess_cycle10ms(uart_handletype* uarthandler)
 					/* retry to send this frame */
 					if (Ret_OK == dma_transfer(uarthandler->cfg_table->dma_tx_id, l_txmemadr_ul, l_txdatalen_uw))
 					{
-						uarthandler->txstate = UART_TxSt_TRGR;
+						UART_DMATX_ENABLE(uart_reg);
+						uarthandler->txstate = UART_TxSt_BUSY;
 					}
 					else
 					{

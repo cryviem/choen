@@ -30,18 +30,18 @@ SPI1:
  > MISO: PB4(sys) ; PC11
 */
 
-#define SPI1_SCL_PIN							PORT_B_PIN_13
-#define SPI1_MOSI_PIN							PORT_B_PIN_15
-
-#include "common_inc.h"
-
 typedef enum {
 	SPI_HANDLER_1,
 	SPI_HANDLER_INVALID
 } spi_handler_id_en;
 
-extern const spi_cfg_type spi_cfg_table[];
-extern const uint16_t C_SPI_NumofChannels;
-extern spi_hdl_type spi_ramtable[];
+extern void spi_init(void);
+extern void spi_main_task(void);
+extern void spi1_start_fullduplex(void);
+extern void spi1_stop(void);
+extern RetType spi1_transmit(uint16_t reqid, void* pdata, uint16_t len);
+extern RetType spi1_transmit_dma(uint16_t reqid, void* pdata, uint16_t len);
+extern RetType spi1_receive_dma(uint16_t reqid, void* pdata, uint16_t len);
+extern RetType spi1_fullduplex_work_dma(uint16_t reqid, void* ptxdata, void* prxdata, uint16_t len);
 
 #endif /* _SPI_CFG_H_ */

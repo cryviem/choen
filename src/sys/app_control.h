@@ -47,13 +47,13 @@
 #define SYSCFG_TIM_5								SYSCFG_NOT_USED
 #define SYSCFG_TIM_6								SYSCFG_NOT_USED
 #define SYSCFG_TIM_7								SYSCFG_NOT_USED
-#define SYSCFG_TIM_8								SYSCFG_USED
+#define SYSCFG_TIM_8								SYSCFG_NOT_USED
 #define SYSCFG_TIM_9								SYSCFG_NOT_USED
 #define SYSCFG_TIM_10								SYSCFG_NOT_USED
 #define SYSCFG_TIM_11							  	SYSCFG_NOT_USED
 #define SYSCFG_TIM_12							  	SYSCFG_NOT_USED
 #define SYSCFG_TIM_13							  	SYSCFG_NOT_USED
-#define SYSCFG_TIM_14							  	SYSCFG_USED
+#define SYSCFG_TIM_14							  	SYSCFG_NOT_USED
 
 /* UART*/
 #define SYSCFG_USART_1								SYSCFG_USED
@@ -70,7 +70,7 @@
 
 /* SPI */
 #define SYSCFG_SPI_1							  	SYSCFG_NOT_USED
-#define SYSCFG_SPI_2							  	SYSCFG_NOT_USED
+#define SYSCFG_SPI_2							  	SYSCFG_USED
 #define SYSCFG_SPI_3							  	SYSCFG_NOT_USED
 
 /* CAN */

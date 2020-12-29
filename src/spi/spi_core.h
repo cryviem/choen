@@ -9,7 +9,7 @@
 #define _SPI_CORE_H_
 
 #include "common_inc.h"
-#include "dmacore.h"
+#include "dmacfg.h"
 
 
 /* Pin mapping
@@ -56,8 +56,8 @@ SPI1:
 
 #define SPI_GETREG(_chnl_)												(SPI_TypeDef *)((_chnl_ == 1)? SPI1_BASE : ((_chnl_ == 2)? SPI2_BASE : ((_chnl_ == 3)? SPI3_BASE : 0)))
 
-#define SPI_FLAG_MASK															(uint16_t)0x01FF
-#define SPI_GETFLAG(__HANDLE__, __FLAG__) 				((__HANDLE__->SR & ((uint16_t)__FLAG__ & SPI_FLAG_MASK)) == ((uint16_t)__FLAG__ & SPI_FLAG_MASK))
+#define SPI_FLAG_MASK												(uint16_t)0x01FF
+#define SPI_GETFLAG(__HANDLE__, __FLAG__) 							((__HANDLE__->SR & ((uint16_t)__FLAG__ & SPI_FLAG_MASK)) == ((uint16_t)__FLAG__ & SPI_FLAG_MASK))
 
 #define SPI_ENABLE(__HANDLE__)										__HANDLE__->CR1 |= SPI_CR1_SPE
 #define SPI_DISABLE(__HANDLE__)										__HANDLE__->CR1 &= ~SPI_CR1_SPE
@@ -77,6 +77,9 @@ SPI1:
 
 #define SPI_IS_16BFORMAT(__HANDLE__)								(__HANDLE__->CR1 & SPI_CR1_DFF)
 
+#define SPI_CLEAR_OVR_FLAG(__HANDLE__)								while (0) \
+																	{ uint16_t tmp = __HANDLE__->DR; \
+																	  tmp = __HANDLE__->SR; }
 typedef enum {
 	SPI_SW_FULL,
 	SPI_SW_TX,
@@ -138,15 +141,16 @@ typedef struct {
 	spi_rx_hdl_type								rxbox;
 } spi_hdl_type;
 
-extern void spi_start(spi_hdl_type* hdler, spi_run_type run);
-extern void spi_stop(spi_hdl_type* hdler);
-extern RetType spi_bidirec_setup_tx(spi_hdl_type* hdler);
-extern RetType spi_bidirec_setup_rx(spi_hdl_type* hdler);
-extern RetType spi_bidirec_is_tx(spi_hdl_type* hdler);
-extern void spi_init(const spi_cfg_type* spicfg, spi_hdl_type* spihandler);
-extern RetType spi_transmit(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16_t len);
-extern RetType spi_transmit_dma(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16_t len);
-extern RetType spi_receive_dma(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16_t len);
+extern void spicore_start(spi_hdl_type* hdler, spi_run_type run);
+extern void spicore_stop(spi_hdl_type* hdler);
+extern RetType spicore_bidirec_setup_tx(spi_hdl_type* hdler);
+extern RetType spicore_bidirec_setup_rx(spi_hdl_type* hdler);
+extern RetType spicore_bidirec_is_tx(spi_hdl_type* hdler);
+extern void spicore_init(const spi_cfg_type* spicfg, spi_hdl_type* spihandler);
+extern RetType spicore_transmit(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16_t len);
+extern RetType spicore_transmit_dma(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16_t len);
+extern RetType spicore_receive_dma(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16_t len);
+extern RetType spicore_fullduplex_work_dma(spi_hdl_type* hdler, uint16_t reqid, void* ptxdata, void* prxdata, uint16_t len);
 extern void spiproc_maintask(spi_hdl_type* hdler);
 
 #endif /* _SPI_CORE_H_ */

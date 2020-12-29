@@ -10,7 +10,7 @@ typedef enum {
 
 
 extern void uart_init(void);
-extern void uart_start(void);
+extern void uart_channel1_start(void);
 extern void uart_main_task(void);
 extern void uart_sts_update_task(void);
 

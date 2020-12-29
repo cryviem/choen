@@ -4,6 +4,7 @@
 #include "app_control.h"
 #include "common_inc.h"
 #include "uartcfg.h"
+#include "spi_cfg.h"
 
 #if (SYSCFG_BUTTON_SUPPORT == SYSCFG_USED)
 #include "port.h"
@@ -33,6 +34,7 @@ TASK(TaskOS_5ms)
 {
 	dmaproc_updatestatus();
 	uart_sts_update_task();
+	spi_main_task();
 }
 
 /* task 10ms

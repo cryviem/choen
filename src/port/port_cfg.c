@@ -87,49 +87,40 @@ const Port_ConfigType		User_PortConfig[] =
 		PORT_PIN_IN,
 		PORT_PIN_LEVEL_DONTCARE,
 	},
-	/****************STEPPER********************/
+	/****************SPI********************/
 	{
-		PORT_C_PIN_6,								// stepper x step
+		PORT_B_PIN_12,								// SPI2 NSS
 		PORT_PIN_HW_PUSHPULL,
 		PORT_PIN_HW_NO_PUPD,
 
-		PORT_PIN_MODE_TIM_8_11,
+		PORT_PIN_MODE_SPI_1_2,
 		PORT_PIN_OUT,
 		PORT_PIN_LEVEL_LOW,
 	},
 	{
-		PORT_C_PIN_7,								// stepper x dir
+		PORT_B_PIN_13,								// SPI2 CLK
 		PORT_PIN_HW_PUSHPULL,
 		PORT_PIN_HW_NO_PUPD,
 
-		PORT_PIN_MODE_TIM_8_11,
+		PORT_PIN_MODE_SPI_1_2,
 		PORT_PIN_OUT,
 		PORT_PIN_LEVEL_LOW,
 	},
 	{
-		PORT_C_PIN_8,								// stepper y step
+		PORT_B_PIN_14,								// SPI2 MISO
 		PORT_PIN_HW_PUSHPULL,
 		PORT_PIN_HW_NO_PUPD,
 
-		PORT_PIN_MODE_TIM_8_11,
-		PORT_PIN_OUT,
+		PORT_PIN_MODE_SPI_1_2,
+		PORT_PIN_IN,
 		PORT_PIN_LEVEL_LOW,
 	},
 	{
-		PORT_C_PIN_9,								// stepper y dir
+		PORT_B_PIN_15,								// SPI2 MOSI
 		PORT_PIN_HW_PUSHPULL,
 		PORT_PIN_HW_NO_PUPD,
 
-		PORT_PIN_MODE_TIM_8_11,
-		PORT_PIN_OUT,
-		PORT_PIN_LEVEL_LOW,
-	},
-	{
-		PORT_A_PIN_7,								// servo control pin
-		PORT_PIN_HW_PUSHPULL,
-		PORT_PIN_HW_NO_PUPD,
-
-		PORT_PIN_MODE_CAN_TIM_12_14,
+		PORT_PIN_MODE_SPI_1_2,
 		PORT_PIN_OUT,
 		PORT_PIN_LEVEL_LOW,
 	},

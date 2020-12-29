@@ -1,8 +1,6 @@
 
 #include "uart_if.h"
 
-
-
 void print_text(char *str)
 {
 	uint8_t i;

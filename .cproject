@@ -43,7 +43,8 @@
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/src/port&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/src/print&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/src/os&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/src/2dplotter&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/src/spi&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/src/plotter&quot;"/>
 								</option>
 								<option id="gnu.c.compiler.option.dialect.std.263268414" name="Language standard" superClass="gnu.c.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.c.compiler.dialect.c99" valueType="enumerated"/>
 								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c.937084115" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c"/>
@@ -130,7 +131,8 @@
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/src/port&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/src/print&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/src/os&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/src/2dplotter&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/src/spi&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/src/plotter&quot;"/>
 								</option>
 								<option id="gnu.c.compiler.option.dialect.std.1224362194" name="Language standard" superClass="gnu.c.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.c.compiler.dialect.c99" valueType="enumerated"/>
 								<option id="fr.ac6.managedbuid.gnu.c.compiler.option.misc.other.236553482" name="Other flags" superClass="fr.ac6.managedbuid.gnu.c.compiler.option.misc.other" useByScannerDiscovery="false" value="-fmessage-length=0" valueType="string"/>

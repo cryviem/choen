@@ -94,20 +94,20 @@ const dma_StreamCfgST user_dmacfgtable[DMA_HANDLER_INVALID] = {
 //		(uint32_t)0x00
 //	},
 	/* ADVANED TIMER */
-	{
-		DMA2_STREAM_1,
-		7,
-		FALSE,
-		DMA_TRANSTYPE_DIRECT,
-		DMA_CR_Priority_High,
-		DMA_CR_DIR_Mem2Periph,
-		DMA_CR_PSIZE_32Bit,
-		DMA_CR_MSIZE_32Bit,
-		DMA_ADDRINC_PeriphFixedMemInc,
-		(uint32_t)&TIM8->DMAR,
-		(uint32_t)NULL,
-		(uint32_t)0x00
-	},
+//	{
+//		DMA2_STREAM_1,
+//		7,
+//		FALSE,
+//		DMA_TRANSTYPE_DIRECT,
+//		DMA_CR_Priority_High,
+//		DMA_CR_DIR_Mem2Periph,
+//		DMA_CR_PSIZE_32Bit,
+//		DMA_CR_MSIZE_32Bit,
+//		DMA_ADDRINC_PeriphFixedMemInc,
+//		(uint32_t)&TIM8->DMAR,
+//		(uint32_t)NULL,
+//		(uint32_t)0x00
+//	},
 	/************UART************/
 	{
 		DMA2_STREAM_7,
@@ -137,10 +137,39 @@ const dma_StreamCfgST user_dmacfgtable[DMA_HANDLER_INVALID] = {
 		(uint32_t)NULL,
 		(uint32_t)0x00
 	},
+	/************SPI2************/
+	{
+		DMA1_STREAM_4,
+		0,
+		FALSE,
+		DMA_TRANSTYPE_DIRECT,
+		DMA_CR_Priority_High,
+		DMA_CR_DIR_Mem2Periph,
+		DMA_CR_PSIZE_16Bit,
+		DMA_CR_MSIZE_16Bit,
+		DMA_ADDRINC_PeriphFixedMemInc,
+		(uint32_t)&SPI2->DR,
+		(uint32_t)NULL,
+		(uint32_t)0x00
+	},
+	{
+		DMA1_STREAM_3,
+		0,
+		FALSE,
+		DMA_TRANSTYPE_DIRECT,
+		DMA_CR_Priority_High,
+		DMA_CR_DIR_Periph2Mem,
+		DMA_CR_PSIZE_16Bit,
+		DMA_CR_MSIZE_16Bit,
+		DMA_ADDRINC_PeriphFixedMemInc,
+		(uint32_t)&SPI2->DR,
+		(uint32_t)NULL,
+		(uint32_t)0x00
+	},
 };
 
 /*typedef struct {
-	dma_StreamEN	streamid;
+	dma_StreamEN		streamid;
 	uint8_t				channelid;
 	uint8_t				circularenable;
 	uint8_t				transfertype;

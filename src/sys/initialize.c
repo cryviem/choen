@@ -5,6 +5,7 @@
 #include "common_inc.h"
 #include "uartcfg.h"
 #include "uart_if.h"
+#include "spi_cfg.h"
 
 /* PRIVATE FUNCTION DECLARE BEGIN */
 static void pvt_clocksetting_v(void);
@@ -17,6 +18,7 @@ void Prj_InitBeforeOS(void)
 	Port_Init(User_PortConfig);
 	dma_init();
 	uart_init();
+	spi_init();
 
 }
 
@@ -24,7 +26,8 @@ void Prj_InitBeforeOS(void)
 void Prj_InitBeforeTaskRun(void)
 {
 	uartif_ClearRingBuffs();
-	uart_start();
+	uart_channel1_start();
+	spi1_start_fullduplex();
 }
 
 void Prj_InitAfterTaskRun(void)

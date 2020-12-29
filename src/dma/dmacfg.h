@@ -6,9 +6,10 @@
 #include "common_inc.h"
 
 typedef enum {
-	DMA_HANDLER_TIM8UP,
 	DMA_HANDLER_UART1TX,
 	DMA_HANDLER_UART1RX,
+	DMA_HANDLER_SPI2TX,
+	DMA_HANDLER_SPI2RX,
 	DMA_HANDLER_INVALID
 } dma_handler_id_en;
 

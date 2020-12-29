@@ -35,16 +35,13 @@ void uart_init(void)
 	uartcore_init(uart_cfgtable, uart_ramtable, UART_HANDLER_INVALID);
 }
 
-void uart_start(void)
+void uart_channel1_start(void)
 {
-	uint8_t indx;
-	for (indx = 0; indx < UART_HANDLER_INVALID; indx++)
-	{
-		uartcore_mainprocess_cycle10ms(&uart_ramtable[indx]);
-		UART_ENABLE(uart_cfgtable[indx].channel);
-		UART_TX_ENABLE(uart_cfgtable[indx].channel);
-	}
+
+	UART_ENABLE(uart_cfgtable[UART_HANDLER_1].channel);
+	UART_TX_ENABLE(uart_cfgtable[UART_HANDLER_1].channel);
 }
+
 void uart_main_task(void)
 {
 	uint8_t indx;

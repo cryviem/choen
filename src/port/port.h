@@ -159,14 +159,14 @@ typedef enum {
 	PORT_PIN_MODE_TIM_8_11,												//	AF3
 	PORT_PIN_MODE_I2C_1_3,												//  AF4
 	PORT_PIN_MODE_SPI_1_2,												//	AF5
-	PORT_PIN_MODE_SPI_3,													//	AF6
+	PORT_PIN_MODE_SPI_3,												//	AF6
 	PORT_PIN_MODE_USART_1_3,											//	AF7
 	PORT_PIN_MODE_USART_4_6,											//	AF8
-	PORT_PIN_MODE_CAN_TIM_12_14,									//	AF9
+	PORT_PIN_MODE_CAN_TIM_12_14,										//	AF9
 	PORT_PIN_MODE_USB_OTG,												//	AF10
-	PORT_PIN_MODE_ETH,														//	AF11
-	PORT_PIN_MODE_FSMC_SDIO_OTG_HS,								//	AF12
-	PORT_PIN_MODE_DCMI,														//	AF13
+	PORT_PIN_MODE_ETH,													//	AF11
+	PORT_PIN_MODE_FSMC_SDIO_OTG_HS,										//	AF12
+	PORT_PIN_MODE_DCMI,													//	AF13
 	PORT_PIN_MODE_EVENTOUT,												//	AF15
 } Port_PinModeType;
 
@@ -190,9 +190,9 @@ typedef struct {
 	uint8_t											PinHWType;
 	uint8_t											PinHWPuPd;
 	// standard
-	Port_PinModeType						PinMode;
-	Port_PinDirectionType				PinDirection;
-	Port_PinLevelValueType			PinInitValue;
+	Port_PinModeType								PinMode;
+	Port_PinDirectionType							PinDirection;
+	Port_PinLevelValueType							PinInitValue;
 } Port_ConfigType;
 
 /*----------------------------------------------------------------------------------------*/

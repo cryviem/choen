@@ -75,7 +75,6 @@
 
 typedef enum {
 	UART_TxSt_IDLE,
-	UART_TxSt_TRGR,
 	UART_TxSt_BUSY,
 	UART_TxSt_ERROR
 }	uart_TxStateType;

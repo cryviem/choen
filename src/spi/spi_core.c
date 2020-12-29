@@ -4,10 +4,10 @@
 	*  Created on: June 23, 2018
 	*  Author: Mr.A
 */
-
+#include "common_inc.h"
 #include "spi_core.h"
 #include "spi_cfg.h"
-#include "dmacore.h"
+#include "dmacfg.h"
 /*	PRIVATE VARIABLE DECLARATION BEGIN*/
 /*	PRIVATE VARIABLE DECLARATION END*/
 
@@ -109,7 +109,7 @@ static void spi_subinit(const spi_cfg_type* cfgtable)
 	l_reg->CR1 |= SPI_CR1_MSTR;
 }
 
-void spi_init(const spi_cfg_type* spicfg, spi_hdl_type* spihandler)
+void spicore_init(const spi_cfg_type* spicfg, spi_hdl_type* spihandler)
 {
 	uint8_t	l_index;
 	
@@ -128,7 +128,7 @@ void spi_init(const spi_cfg_type* spicfg, spi_hdl_type* spihandler)
 	}
 }
 
-RetType spi_transmit(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16_t len)
+RetType spicore_transmit(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16_t len)
 {
 
 	if (!SPI_IS_ENABLE(hdler->cfgtable->reg))
@@ -154,7 +154,7 @@ RetType spi_transmit(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16_t 
 	hdler->txbox.pnor_databuf = pdata;
 	hdler->txbox.nor_len = len;
 	
-	/* do the first transmision*/
+	/* do the first transmission*/
 	hdler->cfgtable->reg->DR = (SPI_IS_16BFORMAT(hdler->cfgtable->reg)? *((uint16_t*)pdata) : *((uint8_t*)pdata));
 	hdler->txbox.nor_cnt = 1;
 
@@ -162,7 +162,7 @@ RetType spi_transmit(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16_t 
 	return Ret_OK;
 }
 
-RetType spi_transmit_dma(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16_t len)
+RetType spicore_transmit_dma(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16_t len)
 {
 	if (!SPI_IS_ENABLE(hdler->cfgtable->reg))
 	{
@@ -176,14 +176,8 @@ RetType spi_transmit_dma(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint1
 		return Ret_NotOK;
 	}
 
-	if (hdler->txbox.dmahdlr == NULL)
-	{
-		/* DMA handler is not available */
-		return Ret_NotOK;
-	}
-
 	/* start DMA stream */
-	if (Ret_OK == dma_transfer(hdler->cfg_table->dma_tx_id, (uint32_t) pdata, len))
+	if (Ret_OK == dma_transfer(hdler->cfgtable->dma_tx_id, (uint32_t) pdata, len))
 	{
 		/* trigger DMA successfully - go to other state*/
 		hdler->txbox.reqid = reqid;
@@ -197,9 +191,9 @@ RetType spi_transmit_dma(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint1
 	}
 }
 
-RetType spi_receive_dma(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16_t len)
+RetType spicore_receive_dma(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16_t len)
 {
-	if (!SPI_IS_ENABLE(hdler->reg))
+	if (!SPI_IS_ENABLE(hdler->cfgtable->reg))
 	{
 		/*spi channel disabled*/
 		return Ret_NotOK;
@@ -211,24 +205,22 @@ RetType spi_receive_dma(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16
 		return Ret_NotOK;
 	}
 
-	if (hdler->rxbox.dmahdlr == NULL)
-	{
-		/* DMA handler is not available */
-		return Ret_NotOK;
-	}
-
 	if (len == 0)
 	{
 		/*length invalid*/
 		return Ret_NotOK;
 	}
+
+	/* Do clear OVR flag*/
+	SPI_CLEAR_OVR_FLAG(hdler->cfgtable->reg);
+
 	/* start DMA stream */
-	if (DMA_Return_OK == dma_starttransfer(hdler->rxbox.dmahdlr, (uint32_t) pdata, len))
+	if (Ret_OK == dma_transfer(hdler->cfgtable->dma_rx_id, (uint32_t) pdata, len))
 	{
 		/* trigger DMA successfully - go to other state*/
 		hdler->rxbox.reqid = reqid;
 		hdler->rxbox.tarlen = len;
-		SPI_RXDMA_ENABLE(hdler->reg);
+		SPI_RXDMA_ENABLE(hdler->cfgtable->reg);
 		hdler->rxbox.status = SPI_RXSTS_BUSYDMA;
 		return Ret_OK;
 	}
@@ -238,7 +230,45 @@ RetType spi_receive_dma(spi_hdl_type* hdler, uint16_t reqid, void* pdata, uint16
 	}
 }
 
-RetType spi_bidirec_setup_tx(spi_hdl_type* hdler)
+RetType spicore_fullduplex_work_dma(spi_hdl_type* hdler, uint16_t reqid, void* ptxdata, void* prxdata, uint16_t len)
+{
+	if (!SPI_IS_ENABLE(hdler->cfgtable->reg))
+	{
+		/*spi channel disabled*/
+		return Ret_NotOK;
+	}
+
+	if (hdler->txbox.status == SPI_TXSTS_BUSYDMA || hdler->txbox.status == SPI_TXSTS_BUSYNOR || hdler->rxbox.status == SPI_RXSTS_BUSYDMA)
+	{
+		/* busy*/
+		return Ret_NotOK;
+	}
+	/* Do clear OVR flag*/
+	SPI_CLEAR_OVR_FLAG(hdler->cfgtable->reg);
+
+	if (Ret_NotOK == dma_transfer(hdler->cfgtable->dma_rx_id, (uint32_t) prxdata, len))
+	{
+		return Ret_NotOK;
+	}
+
+	/* trigger DMA successfully - go to other state*/
+	hdler->rxbox.reqid = reqid;
+	hdler->rxbox.tarlen = len;
+	SPI_RXDMA_ENABLE(hdler->cfgtable->reg);
+	hdler->rxbox.status = SPI_RXSTS_BUSYDMA;
+
+	if (Ret_NotOK == dma_transfer(hdler->cfgtable->dma_tx_id, (uint32_t) ptxdata, len))
+	{
+		return Ret_NotOK;
+	}
+	/* trigger DMA successfully - go to other state*/
+	hdler->txbox.reqid = reqid;
+	SPI_TXDMA_ENABLE(hdler->cfgtable->reg);
+	hdler->txbox.status = SPI_TXSTS_BUSYDMA;
+	return Ret_OK;
+}
+
+RetType spicore_bidirec_setup_tx(spi_hdl_type* hdler)
 {
 	if (hdler->rxbox.status == SPI_RXSTS_BUSYDMA || hdler->txbox.status == SPI_TXSTS_BUSYDMA || hdler->txbox.status == SPI_TXSTS_BUSYNOR)
 	{
@@ -246,33 +276,33 @@ RetType spi_bidirec_setup_tx(spi_hdl_type* hdler)
 		return Ret_NotOK;
 	}
 	
-	if (SPI_GETFLAG(hdler->reg, SPI_SR_BSY))
+	if (SPI_GETFLAG(hdler->cfgtable->reg, SPI_SR_BSY))
 	{
 		/* busy flag set*/
 		return Ret_NotOK;
 	}
 	
 	/* Now, it's safe to disable SPI channel for re-cfg*/
-	if (SPI_READ_BIDIOE(hdler->reg))
+	if (SPI_READ_BIDIOE(hdler->cfgtable->reg))
 	{
 		return Ret_OK;
 	}
 	
-	if (SPI_IS_ENABLE(hdler->reg))
+	if (SPI_IS_ENABLE(hdler->cfgtable->reg))
 	{
-		SPI_DISABLE(hdler->reg);
-		SPI_SET_BIDIOE(hdler->reg);
-		SPI_ENABLE(hdler->reg);
+		SPI_DISABLE(hdler->cfgtable->reg);
+		SPI_SET_BIDIOE(hdler->cfgtable->reg);
+		SPI_ENABLE(hdler->cfgtable->reg);
 	}
 	else
 	{
-		SPI_SET_BIDIOE(hdler->reg);
+		SPI_SET_BIDIOE(hdler->cfgtable->reg);
 	}
 
 	return Ret_OK;
 }
 
-RetType spi_bidirec_setup_rx(spi_hdl_type* hdler)
+RetType spicore_bidirec_setup_rx(spi_hdl_type* hdler)
 {
 	if (hdler->rxbox.status == SPI_RXSTS_BUSYDMA || hdler->txbox.status == SPI_TXSTS_BUSYDMA || hdler->txbox.status == SPI_TXSTS_BUSYNOR)
 	{
@@ -280,35 +310,35 @@ RetType spi_bidirec_setup_rx(spi_hdl_type* hdler)
 		return Ret_NotOK;
 	}
 	
-	if (SPI_GETFLAG(hdler->reg, SPI_SR_BSY))
+	if (SPI_GETFLAG(hdler->cfgtable->reg, SPI_SR_BSY))
 	{
 		/* busy flag set*/
 		return Ret_NotOK;
 	}
 	
 	/* Now, it's safe to disable SPI channel for re-cfg*/
-	if (!SPI_READ_BIDIOE(hdler->reg))
+	if (!SPI_READ_BIDIOE(hdler->cfgtable->reg))
 	{
 		return Ret_OK;
 	}
 	
-	if (SPI_IS_ENABLE(hdler->reg))
+	if (SPI_IS_ENABLE(hdler->cfgtable->reg))
 	{
-		SPI_DISABLE(hdler->reg);
-		SPI_CLEAR_BIDIOE(hdler->reg);
-		SPI_ENABLE(hdler->reg);
+		SPI_DISABLE(hdler->cfgtable->reg);
+		SPI_CLEAR_BIDIOE(hdler->cfgtable->reg);
+		SPI_ENABLE(hdler->cfgtable->reg);
 	}
 	else
 	{
-		SPI_CLEAR_BIDIOE(hdler->reg);
+		SPI_CLEAR_BIDIOE(hdler->cfgtable->reg);
 	}
 	
 	return Ret_OK;
 }
 
-RetType spi_bidirec_is_tx(spi_hdl_type* hdler)
+RetType spicore_bidirec_is_tx(spi_hdl_type* hdler)
 {
-	if (SPI_READ_BIDIOE(hdler->reg))
+	if (SPI_READ_BIDIOE(hdler->cfgtable->reg))
 	{
 		return Ret_OK;
 	}
@@ -318,10 +348,10 @@ RetType spi_bidirec_is_tx(spi_hdl_type* hdler)
 	}
 }
 
-void spi_start(spi_hdl_type* hdler, spi_run_type run)
+void spicore_start(spi_hdl_type* hdler, spi_run_type run)
 {
 	
-	SPI_ENABLE(hdler->reg);
+	SPI_ENABLE(hdler->cfgtable->reg);
 	
 	switch (run)
 	{
@@ -342,44 +372,47 @@ void spi_start(spi_hdl_type* hdler, spi_run_type run)
 	}
 }
 
-void spi_stop(spi_hdl_type* hdler)
+void spicore_stop(spi_hdl_type* hdler)
 {
-	SPI_DISABLE(hdler->reg);
+	SPI_DISABLE(hdler->cfgtable->reg);
 	hdler->rxbox.status = SPI_RXSTS_OFF;
 	hdler->txbox.status = SPI_TXSTS_OFF;
 }
 
 void spiproc_maintask(spi_hdl_type* hdler)
 {
-	uint16_t tmpu16;
+	SPI_TypeDef *l_reg;
+	uint16_t	tmpu16;
+
+	l_reg = hdler->cfgtable->reg;
 	
-	if (SPI_IS_ENABLE(hdler->reg))
+	if (SPI_IS_ENABLE(l_reg))
 	{
 		/* TX SECTION - BEGIN ***********************************/
 		if (hdler->txbox.status == SPI_TXSTS_BUSYDMA)
 		{
-			switch(dma_getstreamstatus(hdler->txbox.dmahdlr))
+			switch(dma_getstatus(hdler->cfgtable->dma_tx_id))
 			{
 			case DMA_Status_Error:
 			{
-				/* error occured from DMA - reset DMA state anyway */
-				dma_finishjob(hdler->txbox.dmahdlr);
-				SPI_TXDMA_DISABLE(hdler->reg);
+				/* error occurred from DMA - reset DMA state anyway */
+				dma_cleanup(hdler->cfgtable->dma_tx_id);
+				SPI_TXDMA_DISABLE(l_reg);
 				/* go to error state */
 				hdler->txbox.status = SPI_TXSTS_ERROR;
 				break;
 			}
 			case DMA_Status_Completed:
 			{
-				if (SPI_GETFLAG(hdler->reg, SPI_SR_TXE))
+				if (SPI_GETFLAG(l_reg, SPI_SR_TXE))
 				{
 					/* make DMA ready for new transfer */
-					dma_finishjob(hdler->txbox.dmahdlr);
-					SPI_TXDMA_DISABLE(hdler->reg);
+					dma_cleanup(hdler->cfgtable->dma_tx_id);
+					SPI_TXDMA_DISABLE(l_reg);
 					/* back to the IDLE state */
 					hdler->txbox.status = SPI_TXSTS_IDLE;
 
-					/* call transmited indication with respective request id */
+					/* call transmitted indication with respective request id */
 					if (hdler->cfgtable->cbftable.spi_txindcn_cb != NULL)
 					{
 						hdler->cfgtable->cbftable.spi_txindcn_cb(hdler->txbox.reqid);
@@ -391,7 +424,7 @@ void spiproc_maintask(spi_hdl_type* hdler)
 			case DMA_Status_NotStarted:
 			{
 				/*unexpected case: add lamp to check*/
-				SPI_TXDMA_DISABLE(hdler->reg);
+				SPI_TXDMA_DISABLE(l_reg);
 				hdler->txbox.status = SPI_TXSTS_ERROR;
 				break;
 			}
@@ -404,12 +437,12 @@ void spiproc_maintask(spi_hdl_type* hdler)
 		}
 		else if (hdler->txbox.status == SPI_TXSTS_BUSYNOR)
 		{
-			if (SPI_GETFLAG(hdler->reg, SPI_SR_TXE))
+			if (SPI_GETFLAG(l_reg, SPI_SR_TXE))
 			{
 				if (hdler->txbox.nor_cnt < hdler->txbox.nor_len)
 				{
 					/*put the next byte to DR reg*/
-					hdler->reg->DR = (SPI_IS_16BFORMAT(hdler->reg)? \
+					l_reg->DR = (SPI_IS_16BFORMAT(l_reg)? \
 					*((uint16_t*)hdler->txbox.pnor_databuf + hdler->txbox.nor_cnt) : \
 					*((uint8_t*)hdler->txbox.pnor_databuf + hdler->txbox.nor_cnt));
 					
@@ -420,7 +453,7 @@ void spiproc_maintask(spi_hdl_type* hdler)
 					/* well done, go to idle*/
 					hdler->txbox.status = SPI_TXSTS_IDLE;
 
-					/* call transmited indication with respective request id */
+					/* call transmitted indication with respective request id */
 					if (hdler->cfgtable->cbftable.spi_txindcn_cb != NULL)
 					{
 						hdler->cfgtable->cbftable.spi_txindcn_cb(hdler->txbox.reqid);
@@ -441,13 +474,13 @@ void spiproc_maintask(spi_hdl_type* hdler)
 		/* RX SECTION - BEGIN ***********************************/
 		if (hdler->rxbox.status == SPI_RXSTS_BUSYDMA)
 		{
-			switch(dma_getstreamstatus(hdler->rxbox.dmahdlr))
+			switch(dma_getstatus(hdler->cfgtable->dma_rx_id))
 			{
 			case DMA_Status_Error:
 			{
-				/* error occured from DMA - reset DMA state anyway */
-				dma_finishjob(hdler->rxbox.dmahdlr);
-				SPI_RXDMA_DISABLE(hdler->reg);
+				/* error occurred from DMA - reset DMA state anyway */
+				dma_cleanup(hdler->cfgtable->dma_rx_id);
+				SPI_RXDMA_DISABLE(l_reg);
 				/* go to error state */
 				hdler->rxbox.status = SPI_RXSTS_ERROR;
 				break;
@@ -455,13 +488,13 @@ void spiproc_maintask(spi_hdl_type* hdler)
 			case DMA_Status_Completed:
 			{
 				/* make DMA ready for new transfer */
-				dma_finishjob(hdler->rxbox.dmahdlr);
-				SPI_RXDMA_DISABLE(hdler->reg);
+				dma_cleanup(hdler->cfgtable->dma_rx_id);
+				SPI_RXDMA_DISABLE(l_reg);
 				
-				/* call received notification with respective request id and quantitty of received data */
+				/* call received notification with respective request id and quantity of received data */
 				if (hdler->cfgtable->cbftable.spi_rxcplt_cb != NULL)
 				{
-					tmpu16 = hdler->rxbox.dmahdlr->reg.control->NDTR;
+					tmpu16 = dma_getNDTR(hdler->cfgtable->dma_rx_id);
 					tmpu16 = hdler->rxbox.tarlen - tmpu16;
 					hdler->cfgtable->cbftable.spi_rxcplt_cb(hdler->rxbox.reqid, tmpu16);
 				}
@@ -474,7 +507,7 @@ void spiproc_maintask(spi_hdl_type* hdler)
 			case DMA_Status_NotStarted:
 			{
 				/*unexpected case: add lamp to check*/
-				SPI_RXDMA_DISABLE(hdler->reg);
+				SPI_RXDMA_DISABLE(l_reg);
 				hdler->rxbox.status = SPI_RXSTS_ERROR;
 				break;
 			}
