@@ -1,7 +1,9 @@
+#include "movement.h"
+
 #include <stdlib.h>
 #include <math.h>
-#include "movement.h"
 #include "common_inc.h"
+
 #include "stepper.h"
 
 xy_position_t	current_pos = {0};

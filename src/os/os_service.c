@@ -5,10 +5,6 @@
 #include "common_inc.h"
 #include "uartcfg.h"
 
-#include "movement.h"
-#include "stepper.h"
-#include "servo.h"
-
 #if (SYSCFG_BUTTON_SUPPORT == SYSCFG_USED)
 #include "port.h"
 #define BUTTON_FILTERTIME						10
@@ -36,7 +32,6 @@ priority: 0xFA --> highest
 TASK(TaskOS_5ms)
 {
 	dmaproc_updatestatus();
-	stepper_task();
 	uart_sts_update_task();
 }
 
@@ -122,8 +117,6 @@ void prc_buttonstatus_v(void)
 
 	if (eventcnt > BUTTON_FILTERTIME)
 	{
-		stepper_test();
-		//servo_test();
 		/* button pressed detected */
 		eventcnt = 0;
 	}

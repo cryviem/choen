@@ -6,9 +6,6 @@
 #include "uartcfg.h"
 #include "uart_if.h"
 
-#include "servo.h"
-#include "stepper.h"
-
 /* PRIVATE FUNCTION DECLARE BEGIN */
 static void pvt_clocksetting_v(void);
 /* PRIVATE FUNCTION DECLARE END */
@@ -20,8 +17,6 @@ void Prj_InitBeforeOS(void)
 	Port_Init(User_PortConfig);
 	dma_init();
 	uart_init();
-	stepper_init();
-	servo_init();
 
 }
 
