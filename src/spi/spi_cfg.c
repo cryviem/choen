@@ -43,19 +43,19 @@ typedef struct {
 const spi_cfg_type spi_cfg_table[SPI_HANDLER_INVALID] = {
 	{
 		SPI2,						/* SPI2 */
-		SPI_BR_DIV8,				/* 42/8= 5.12 Mhz */
+		SPI_BR_DIV256,				/* 42/8= 5.12 Mhz */
 		SPI_CLKMODE_1,				/* CPHA = 1; CPOL = 0 */
-		SPI_OPTYPE_FULLDUPLEX,		/* full duplex mode */
+		SPI_OPTYPE_TXONLY,			/* tx only mode */
 		TRUE,						/* 16 bits format */
 		FALSE,						/* MSB go first */
 		TRUE,						/* HW CS is used */
 		DMA_HANDLER_SPI2TX,			/*  */
-		DMA_HANDLER_SPI2RX,			/*  */
+		DMA_HANDLER_INVALID,			/*  */
 		{
-			&spi_rxcplt,
 			NULL,
 			NULL,
-			NULL
+			spi_txcplt,
+			spi_txerror,
 		}
 	},
 };
@@ -67,6 +67,11 @@ spi_hdl_type spi_ramtable[SPI_HANDLER_INVALID] = {0};
 void spi_init(void)
 {
 	spicore_init(spi_cfg_table, spi_ramtable);
+}
+
+void spi1_start_txonly(void)
+{
+	spicore_start(&spi_ramtable[SPI_HANDLER_1], SPI_SW_TX);
 }
 
 void spi1_start_fullduplex(void)

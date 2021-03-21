@@ -53,7 +53,7 @@
 #define SYSCFG_TIM_11							  	SYSCFG_NOT_USED
 #define SYSCFG_TIM_12							  	SYSCFG_NOT_USED
 #define SYSCFG_TIM_13							  	SYSCFG_NOT_USED
-#define SYSCFG_TIM_14							  	SYSCFG_NOT_USED
+#define SYSCFG_TIM_14							  	SYSCFG_USED
 
 /* UART*/
 #define SYSCFG_USART_1								SYSCFG_USED

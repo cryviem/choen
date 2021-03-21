@@ -111,7 +111,6 @@ void stepper_task(void)
 		switch (dma_status)
 		{
 		case DMA_Status_Error:
-			LED_RED_BLINK();
 			print_text("stepper > dma error\n");
 			TIM_REG->DIER &= (~TIM_DIER_UDE);
 			TIM_REG->CR1 &= (~TIM_CR1_CEN);

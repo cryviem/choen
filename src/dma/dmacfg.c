@@ -138,6 +138,7 @@ const dma_StreamCfgST user_dmacfgtable[DMA_HANDLER_INVALID] = {
 		(uint32_t)0x00
 	},
 	/************SPI2************/
+
 	{
 		DMA1_STREAM_4,
 		0,
@@ -152,6 +153,7 @@ const dma_StreamCfgST user_dmacfgtable[DMA_HANDLER_INVALID] = {
 		(uint32_t)NULL,
 		(uint32_t)0x00
 	},
+#if(0)
 	{
 		DMA1_STREAM_3,
 		0,
@@ -166,6 +168,7 @@ const dma_StreamCfgST user_dmacfgtable[DMA_HANDLER_INVALID] = {
 		(uint32_t)NULL,
 		(uint32_t)0x00
 	},
+#endif
 };
 
 /*typedef struct {

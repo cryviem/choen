@@ -40,6 +40,7 @@ void uart_channel1_start(void)
 
 	UART_ENABLE(uart_cfgtable[UART_HANDLER_1].channel);
 	UART_TX_ENABLE(uart_cfgtable[UART_HANDLER_1].channel);
+	UART_RX_ENABLE(uart_cfgtable[UART_HANDLER_1].channel);
 }
 
 void uart_main_task(void)

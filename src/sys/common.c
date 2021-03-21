@@ -22,13 +22,13 @@ void pf_memcpy(void *des, void *src, uint16_t n)
 	}
 }
 
-uint16_t pf_strlen(uint8_t *str)
+uint16_t pf_strlen(const char *str)
 {
    //Avoiding crashes by initializing string to NULL
    if(str == NULL) //a very simple fix
       return 0;
 
-   uint8_t *p = str;
+   const char *p = str;
 
    while(*p != 0)
       p++;
@@ -37,6 +37,13 @@ uint16_t pf_strlen(uint8_t *str)
 }
 /* mem copy by dma for large data*/
 
+int pf_strcmp(const char* str1, const char* str2)
+{
+    while((*str1!='\0') && (*str1==*str2))
+    	str1++,str2++;
+
+    return *(const unsigned char*)str1-*(const unsigned char*)str2;
+}
 
 /**
  * \brief    Fast Square root algorithm, with rounding

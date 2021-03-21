@@ -37,6 +37,7 @@ typedef enum {
 
 extern void spi_init(void);
 extern void spi_main_task(void);
+extern void spi1_start_txonly(void);
 extern void spi1_start_fullduplex(void);
 extern void spi1_stop(void);
 extern RetType spi1_transmit(uint16_t reqid, void* pdata, uint16_t len);

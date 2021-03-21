@@ -6,6 +6,7 @@
 #include "uartcfg.h"
 #include "uart_if.h"
 #include "spi_cfg.h"
+#include "stepper.h"
 
 /* PRIVATE FUNCTION DECLARE BEGIN */
 static void pvt_clocksetting_v(void);
@@ -19,6 +20,7 @@ void Prj_InitBeforeOS(void)
 	dma_init();
 	uart_init();
 	spi_init();
+	//stepper_init();
 
 }
 
@@ -27,7 +29,7 @@ void Prj_InitBeforeTaskRun(void)
 {
 	uartif_ClearRingBuffs();
 	uart_channel1_start();
-	spi1_start_fullduplex();
+	spi1_start_txonly();
 }
 
 void Prj_InitAfterTaskRun(void)

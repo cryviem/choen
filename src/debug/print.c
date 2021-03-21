@@ -5,7 +5,7 @@ void print_text(char *str)
 {
 	uint8_t i;
 	uint8_t* l_ptr;
-	uint16_t len = pf_strlen((uint8_t*)str);
+	uint16_t len = pf_strlen(str);
 	/* maximum string length is UART_TX_FRAME_SIZE * UART_TX_BUF_SIZE = 256 * 5 = 1280 bytes */
 	for (i = 0; i < UART_TX_BUF_SIZE; i++)
 	{
@@ -31,7 +31,6 @@ void print_text(char *str)
 	}
 }
 
-
 uint8_t int2str(char* des, int32_t value)
 {
 	char digit[10], tmp, i, offset = 0, indx = 0;
@@ -56,13 +55,14 @@ uint8_t int2str(char* des, int32_t value)
 		indx++;
 	}while (remain > 0);
 
-	des[indx + offset] = 0x00;
+	des[indx + offset] = '\n';
+	des[indx + offset + 1] = 0x00;
 
 	for (i = offset; i < (indx + offset); i++)
 	{
 		des[i] = digit[(indx + offset - i -1)] + 0x30;
 	}	
-	return (indx + offset);
+	return (indx + offset + 1);
 }
 
 void print_num(int32_t value)

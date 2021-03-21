@@ -52,6 +52,7 @@ static void spi_subinit(const spi_cfg_type* cfgtable)
 	switch (cfgtable->optype)
 	{
 		case SPI_OPTYPE_FULLDUPLEX:
+		case SPI_OPTYPE_TXONLY:
 			/*clear BIDIMODE and RXONLY bits*/
 			/*cleared from above*/
 			break;
@@ -65,6 +66,9 @@ static void spi_subinit(const spi_cfg_type* cfgtable)
 			break;
 		case SPI_OPTYPE_RXONLY:
 			l_reg->CR1 |= SPI_CR1_RXONLY;
+			break;
+		default:
+
 			break;
 	}
 
@@ -246,19 +250,23 @@ RetType spicore_fullduplex_work_dma(spi_hdl_type* hdler, uint16_t reqid, void* p
 	/* Do clear OVR flag*/
 	SPI_CLEAR_OVR_FLAG(hdler->cfgtable->reg);
 
+	/* Setup DMA for receiving */
 	if (Ret_NotOK == dma_transfer(hdler->cfgtable->dma_rx_id, (uint32_t) prxdata, len))
 	{
 		return Ret_NotOK;
 	}
 
-	/* trigger DMA successfully - go to other state*/
 	hdler->rxbox.reqid = reqid;
 	hdler->rxbox.tarlen = len;
 	SPI_RXDMA_ENABLE(hdler->cfgtable->reg);
 	hdler->rxbox.status = SPI_RXSTS_BUSYDMA;
 
+	/* Setup DMA for transmitting */
 	if (Ret_NotOK == dma_transfer(hdler->cfgtable->dma_tx_id, (uint32_t) ptxdata, len))
 	{
+		SPI_RXDMA_DISABLE(hdler->cfgtable->reg);
+		hdler->rxbox.status = SPI_RXSTS_IDLE;
+		dma_reset(hdler->cfgtable->dma_rx_id);
 		return Ret_NotOK;
 	}
 	/* trigger DMA successfully - go to other state*/
@@ -411,7 +419,6 @@ void spiproc_maintask(spi_hdl_type* hdler)
 					SPI_TXDMA_DISABLE(l_reg);
 					/* back to the IDLE state */
 					hdler->txbox.status = SPI_TXSTS_IDLE;
-
 					/* call transmitted indication with respective request id */
 					if (hdler->cfgtable->cbftable.spi_txindcn_cb != NULL)
 					{
@@ -452,7 +459,6 @@ void spiproc_maintask(spi_hdl_type* hdler)
 				{
 					/* well done, go to idle*/
 					hdler->txbox.status = SPI_TXSTS_IDLE;
-
 					/* call transmitted indication with respective request id */
 					if (hdler->cfgtable->cbftable.spi_txindcn_cb != NULL)
 					{

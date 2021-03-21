@@ -4,14 +4,14 @@
 #include "app_control.h"
 #include "common_inc.h"
 #include "uartcfg.h"
-#include "spi_cfg.h"
+#include "fpga.h"
+#include "console.h"
 
 #if (SYSCFG_BUTTON_SUPPORT == SYSCFG_USED)
 #include "port.h"
 #define BUTTON_FILTERTIME						10
 void prc_buttonstatus_v(void);
 #endif /* #if (SYSCFG_BUTTON_SUPPORT == SYSCFG_USED) */
-
 
 /* ISR */
 ISR2(systick_handler)
@@ -63,7 +63,7 @@ priority: 0xF7 --> fourth
  */
 TASK(TaskOS_50ms)
 {
-
+	console_task();
 }
 
 /* task 100ms 
@@ -71,7 +71,7 @@ priority: 0xF6 --> fifth
  */
 TASK(TaskOS_100ms)
 {
-
+	fpga_task();
 }
 
 /* task 500ms 
@@ -105,7 +105,7 @@ void OS_start(void)
 #if (SYSCFG_BUTTON_SUPPORT == SYSCFG_USED)
 void prc_buttonstatus_v(void)
 {
-
+	char *txt = "abc";
 	static uint8_t eventcnt;
 
 	if (PORT_PIN_LEVEL_HIGH == Port_ReadPin(PORT_A_PIN_0))
@@ -120,6 +120,8 @@ void prc_buttonstatus_v(void)
 	if (eventcnt > BUTTON_FILTERTIME)
 	{
 		/* button pressed detected */
+		//fpga_send();
+		//stepper_event();
 		eventcnt = 0;
 	}
 

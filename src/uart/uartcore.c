@@ -268,7 +268,6 @@ void uartcore_mainprocess_cycle10ms(uart_handletype* uarthandler)
 							UART_DMARX_DISABLE(uart_reg);
 							/* back to the IDLE state - ready for new uart transmission */
 							uarthandler->rxstate = UART_RxSt_IDLE;	
-							//LED_BLUE_BLINK();
 							break;
 						}
 						case DMA_Status_NotStarted:

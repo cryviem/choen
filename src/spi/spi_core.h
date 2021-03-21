@@ -51,8 +51,9 @@ SPI1:
 #define SPI_OPTYPE_FULLDUPLEX												0					/*full duplex */
 #define SPI_OPTYPE_BIDIREC_TXFIRST											1					/*half duplux - bidirectional with tx first*/
 #define SPI_OPTYPE_BIDIREC_RXFIRST											2					/*half duplux - bidirectional with rx first*/
-#define SPI_OPTYPE_RXONLY													3					/*half duplux - tx only*/
-#define SPI_OPTYPE_INVALID													4
+#define SPI_OPTYPE_RXONLY													3					/*half duplux - rx only*/
+#define SPI_OPTYPE_TXONLY													4					/*half duplux - tx only*/
+#define SPI_OPTYPE_INVALID													5
 
 #define SPI_GETREG(_chnl_)												(SPI_TypeDef *)((_chnl_ == 1)? SPI1_BASE : ((_chnl_ == 2)? SPI2_BASE : ((_chnl_ == 3)? SPI3_BASE : 0)))
 

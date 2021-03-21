@@ -87,13 +87,36 @@ const Port_ConfigType		User_PortConfig[] =
 		PORT_PIN_IN,
 		PORT_PIN_LEVEL_DONTCARE,
 	},
-	/****************SPI********************/
+#if(0)
+	/***************Input0*****************/
 	{
-		PORT_B_PIN_12,								// SPI2 NSS
+
+		PORT_A_PIN_4,								// Input0
+		PORT_PIN_HW_DEFAULT,
+		PORT_PIN_HW_NO_PUPD,
+
+		PORT_PIN_MODE_DIO,
+		PORT_PIN_IN,
+		PORT_PIN_LEVEL_DONTCARE,
+	},
+	{
+		PORT_A_PIN_7,								// Step
 		PORT_PIN_HW_PUSHPULL,
 		PORT_PIN_HW_NO_PUPD,
 
-		PORT_PIN_MODE_SPI_1_2,
+		PORT_PIN_MODE_CAN_TIM_12_14,
+		PORT_PIN_OUT,
+		PORT_PIN_LEVEL_LOW,
+	},
+#endif
+	/****************SPI********************/
+
+	{
+		PORT_B_PIN_12,								// EN PIN
+		PORT_PIN_HW_PUSHPULL,
+		PORT_PIN_HW_NO_PUPD,
+
+		PORT_PIN_MODE_DIO,
 		PORT_PIN_OUT,
 		PORT_PIN_LEVEL_LOW,
 	},
@@ -107,13 +130,13 @@ const Port_ConfigType		User_PortConfig[] =
 		PORT_PIN_LEVEL_LOW,
 	},
 	{
-		PORT_B_PIN_14,								// SPI2 MISO
+		PORT_B_PIN_14,								// BUSY FLAG
 		PORT_PIN_HW_PUSHPULL,
 		PORT_PIN_HW_NO_PUPD,
 
-		PORT_PIN_MODE_SPI_1_2,
+		PORT_PIN_MODE_DIO,
 		PORT_PIN_IN,
-		PORT_PIN_LEVEL_LOW,
+		PORT_PIN_LEVEL_DONTCARE,
 	},
 	{
 		PORT_B_PIN_15,								// SPI2 MOSI
